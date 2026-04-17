@@ -214,20 +214,27 @@ main {
     color: #667eea;
 }
 
-#algorithm-code {
+/* With this: */
+.code-section pre {
     background: #f5f5f5;
-    color: #333333;
-    padding: 1.5rem;
     border-radius: 8px;
     overflow-x: auto;
     overflow-y: auto;
     max-height: 500px;
+    border: 1px solid #e0e0e0;
+    margin: 0;
+}
+
+#algorithm-code {
+    display: block;
+    padding: 1.5rem;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.9rem;
     line-height: 1.6;
     white-space: pre;
     word-wrap: normal;
-    border: 1px solid #e0e0e0;
+    color: #333333;
+    min-width: max-content;
 }
 
 #algorithm-code::-webkit-scrollbar {
