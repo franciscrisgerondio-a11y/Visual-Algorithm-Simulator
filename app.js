@@ -89,12 +89,12 @@ class AlgorithmSimulator {
 
     setupCanvas() {
         const container = document.getElementById('canvas-container');
-        this.canvas.width = container.clientWidth - 32;
-        this.canvas.height = 400;
+        this.canvas.width = container.clientWidth - 48;
+        this.canvas.height = 450;
         
         window.addEventListener('resize', () => {
-            this.canvas.width = container.clientWidth - 32;
-            this.canvas.height = 400;
+            this.canvas.width = container.clientWidth - 48;
+            this.canvas.height = 450;
             if (this.currentAlgorithm) {
                 this.draw();
             }
@@ -1313,36 +1313,41 @@ function computeLPS(pattern) {
 
     drawArray() {
         const barWidth = (this.canvas.width - 40) / this.data.length;
-        const maxHeight = this.canvas.height - 40;
+        const maxHeight = this.canvas.height - 60;
         
         this.data.forEach((value, index) => {
             const height = (value / 320) * maxHeight;
             const x = 20 + index * barWidth;
-            const y = this.canvas.height - 20 - height;
+            const y = this.canvas.height - 30 - height;
             
             // Color based on state
             if (this.foundIndex === index) {
                 this.ctx.fillStyle = '#4caf50';
             } else if (this.highlightIndices && this.highlightIndices.includes(index)) {
                 this.ctx.fillStyle = '#ff5722';
+            } else if (this.compareIndices && this.compareIndices.includes(index)) {
+                this.ctx.fillStyle = '#ff9800';
             } else {
                 this.ctx.fillStyle = '#667eea';
             }
             
-            this.ctx.fillRect(x, y, barWidth - 2, height);
+            this.ctx.fillRect(x, y, Math.max(barWidth - 2, 8), height);
             
-            // Draw value
-            this.ctx.fillStyle = '#333';
-            this.ctx.font = '10px Arial';
+            // Draw value with better contrast
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = 'bold 11px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(value.toString(), x + (barWidth - 2) / 2, y - 5);
+            this.ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            this.ctx.shadowBlur = 3;
+            this.ctx.fillText(value.toString(), x + Math.max(barWidth - 2, 8) / 2, y - 8);
+            this.ctx.shadowBlur = 0;
         });
     }
 
     drawGraph() {
         if (!this.graph) return;
         
-        // Draw edges
+        // Draw edges first (behind nodes)
         this.graph.edges.forEach(edge => {
             const fromNode = this.graph.nodes[edge.from];
             const toNode = this.graph.nodes[edge.to];
@@ -1355,50 +1360,66 @@ function computeLPS(pattern) {
                 this.currentEdge.from === edge.from && 
                 this.currentEdge.to === edge.to) {
                 this.ctx.strokeStyle = '#ff5722';
-                this.ctx.lineWidth = 3;
+                this.ctx.lineWidth = 4;
             } else {
-                this.ctx.strokeStyle = '#999';
-                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = '#b0b0b0';
+                this.ctx.lineWidth = 2;
             }
             
             this.ctx.stroke();
             
-            // Draw weight
+            // Draw weight with background
             const midX = (fromNode.x + toNode.x) / 2;
             const midY = (fromNode.y + toNode.y) / 2;
-            this.ctx.fillStyle = '#666';
-            this.ctx.font = '12px Arial';
+            
+            // Weight background circle
+            this.ctx.beginPath();
+            this.ctx.arc(midX, midY, 12, 0, 2 * Math.PI);
+            this.ctx.fillStyle = 'white';
+            this.ctx.fill();
+            
+            // Weight text
+            this.ctx.fillStyle = '#333';
+            this.ctx.font = 'bold 11px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
             this.ctx.fillText(edge.weight.toString(), midX, midY);
         });
         
-        // Draw nodes
+        // Draw nodes on top
         this.graph.nodes.forEach(node => {
             this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, 20, 0, 2 * Math.PI);
+            this.ctx.arc(node.x, node.y, 24, 0, 2 * Math.PI);
             
             if (node.visited) {
                 this.ctx.fillStyle = '#4caf50';
+            } else if (this.currentNode && this.currentNode === node.id) {
+                this.ctx.fillStyle = '#ff5722';
             } else {
                 this.ctx.fillStyle = '#667eea';
             }
             
             this.ctx.fill();
-            this.ctx.strokeStyle = '#333';
-            this.ctx.lineWidth = 2;
+            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.lineWidth = 3;
             this.ctx.stroke();
             
+            // Node value with better contrast
             this.ctx.fillStyle = 'white';
-            this.ctx.font = 'bold 14px Arial';
+            this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
+            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            this.ctx.shadowBlur = 2;
             this.ctx.fillText(node.id.toString(), node.x, node.y);
+            this.ctx.shadowBlur = 0;
         });
     }
 
     drawTree() {
         if (!this.tree) return;
         
-        // Draw edges
+        // Draw edges first (behind nodes)
         this.tree.edges.forEach(edge => {
             const fromNode = this.tree.nodes[edge.from];
             const toNode = this.tree.nodes[edge.to];
@@ -1406,105 +1427,157 @@ function computeLPS(pattern) {
             this.ctx.beginPath();
             this.ctx.moveTo(fromNode.x, fromNode.y);
             this.ctx.lineTo(toNode.x, toNode.y);
-            this.ctx.strokeStyle = '#999';
-            this.ctx.lineWidth = 2;
+            this.ctx.strokeStyle = '#90a4ae';
+            this.ctx.lineWidth = 3;
             this.ctx.stroke();
         });
         
-        // Draw nodes
+        // Draw nodes on top
         this.tree.nodes.forEach(node => {
             this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, 20, 0, 2 * Math.PI);
+            this.ctx.arc(node.x, node.y, 24, 0, 2 * Math.PI);
             
             if (node.visited) {
                 this.ctx.fillStyle = '#4caf50';
+            } else if (this.currentNode && this.currentNode === node.id) {
+                this.ctx.fillStyle = '#ff5722';
             } else {
                 this.ctx.fillStyle = '#667eea';
             }
             
             this.ctx.fill();
-            this.ctx.strokeStyle = '#333';
-            this.ctx.lineWidth = 2;
+            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.lineWidth = 3;
             this.ctx.stroke();
             
+            // Node value with better contrast
             this.ctx.fillStyle = 'white';
-            this.ctx.font = 'bold 14px Arial';
+            this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
+            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            this.ctx.shadowBlur = 2;
             this.ctx.fillText(node.value.toString(), node.x, node.y);
+            this.ctx.shadowBlur = 0;
         });
     }
 
     drawFibonacci() {
-        const boxWidth = 60;
-        const boxHeight = 40;
-        const startX = 50;
+        const boxWidth = 70;
+        const boxHeight = 50;
+        const startX = 30;
         const startY = this.canvas.height / 2 - boxHeight / 2;
         
         this.fibSequence.forEach((value, index) => {
-            const x = startX + index * (boxWidth + 10);
+            const x = startX + index * (boxWidth + 15);
             const y = startY;
             
+            // Box with gradient effect
             this.ctx.fillStyle = this.highlightIndices && this.highlightIndices.includes(index) 
                 ? '#ff5722' 
                 : '#667eea';
             
             this.ctx.fillRect(x, y, boxWidth, boxHeight);
             
+            // Border
+            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, boxWidth, boxHeight);
+            
+            // Value text
             this.ctx.fillStyle = 'white';
-            this.ctx.font = 'bold 16px Arial';
+            this.ctx.font = 'bold 18px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
+            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            this.ctx.shadowBlur = 2;
             this.ctx.fillText(value.toString(), x + boxWidth / 2, y + boxHeight / 2);
+            this.ctx.shadowBlur = 0;
             
-            this.ctx.fillStyle = '#333';
+            // Index label
+            this.ctx.fillStyle = '#424242';
             this.ctx.font = '12px Arial';
-            this.ctx.fillText(`F(${index})`, x + boxWidth / 2, y + boxHeight + 20);
+            this.ctx.fillText(`F(${index})`, x + boxWidth / 2, y + boxHeight + 25);
         });
     }
 
     drawString() {
         if (!this.data || !this.data.text) return;
         
-        const charWidth = 30;
-        const startX = 50;
-        const textY = 100;
+        const charWidth = 35;
+        const charHeight = 35;
+        const startX = 30;
+        const textY = 80;
         const patternY = 200;
         
-        // Draw text
-        this.ctx.fillStyle = '#333';
-        this.ctx.font = '14px Arial';
-        this.ctx.fillText('Text:', startX, textY - 20);
+        // Draw text label
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText('Text:', startX, textY - 25);
         
+        // Draw text characters
         this.data.text.forEach((char, index) => {
-            const x = startX + 60 + index * charWidth;
+            const x = startX + 70 + index * charWidth;
             
+            // Box background
             this.ctx.fillStyle = this.data.textIndex === index ? '#ff5722' : '#667eea';
-            this.ctx.fillRect(x, textY - 15, charWidth, 30);
+            this.ctx.fillRect(x, textY - 20, charWidth, charHeight);
             
+            // Border
+            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, textY - 20, charWidth, charHeight);
+            
+            // Character text
             this.ctx.fillStyle = 'white';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(char, x + charWidth / 2, textY);
+            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            this.ctx.shadowBlur = 2;
+            this.ctx.fillText(char, x + charWidth / 2, textY - 2);
+            this.ctx.shadowBlur = 0;
+            
+            // Index below
+            this.ctx.fillStyle = '#666';
+            this.ctx.font = '11px Arial';
+            this.ctx.fillText(index.toString(), x + charWidth / 2, textY + 20);
         });
         
-        // Draw pattern
-        this.ctx.fillStyle = '#333';
-        this.ctx.font = '14px Arial';
-        this.ctx.fillText('Pattern:', startX, patternY - 20);
+        // Draw pattern label
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText('Pattern:', startX, patternY - 25);
         
+        // Draw pattern characters
         this.data.pattern.forEach((char, index) => {
-            const x = startX + 60 + index * charWidth;
+            const x = startX + 70 + index * charWidth;
             
+            // Box background
             this.ctx.fillStyle = this.data.patternIndex === index ? '#ff5722' : '#4caf50';
-            this.ctx.fillRect(x, patternY - 15, charWidth, 30);
+            this.ctx.fillRect(x, patternY - 20, charWidth, charHeight);
             
+            // Border
+            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, patternY - 20, charWidth, charHeight);
+            
+            // Character text
             this.ctx.fillStyle = 'white';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(char, x + charWidth / 2, patternY);
+            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            this.ctx.shadowBlur = 2;
+            this.ctx.fillText(char, x + charWidth / 2, patternY - 2);
+            this.ctx.shadowBlur = 0;
+            
+            // Index below
+            this.ctx.fillStyle = '#666';
+            this.ctx.font = '11px Arial';
+            this.ctx.fillText(index.toString(), x + charWidth / 2, patternY + 20);
         });
     }
 }
