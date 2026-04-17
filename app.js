@@ -10,6 +10,12 @@ class AlgorithmSimulator {
         this.speed = 50;
         this.animationFrame = null;
         this.stats = { comparisons: 0, swaps: 0, operations: 0 };
+        this.logEntries = [];
+        this.maxLogEntries = 100;
+        
+        // Animation timing
+        this.lastDrawTime = 0;
+        this.animationDelay = 100; // Base delay in ms
         
         this.algorithms = {
             // Sorting Algorithms
@@ -738,7 +744,9 @@ function computeLPS(pattern) {
 
     resetStats() {
         this.stats = { comparisons: 0, swaps: 0, operations: 0 };
+        this.logEntries = [];
         this.updateStatsDisplay();
+        this.clearLog();
     }
 
     updateStatsDisplay() {
@@ -746,7 +754,52 @@ function computeLPS(pattern) {
         if (this.stats.comparisons > 0) statsText += `Comparisons: ${this.stats.comparisons} | `;
         if (this.stats.swaps > 0) statsText += `Swaps: ${this.stats.swaps} | `;
         if (this.stats.operations > 0) statsText += `Operations: ${this.stats.operations}`;
-        document.getElementById('stats').textContent = statsText;
+        document.getElementById('stats').textContent = statsText || 'Ready';
+    }
+
+    // Logging functionality
+    addLog(message, type = 'normal') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = {
+            message: message,
+            type: type,
+            timestamp: timestamp
+        };
+        
+        this.logEntries.push(logEntry);
+        
+        // Keep only last maxLogEntries
+        if (this.logEntries.length > this.maxLogEntries) {
+            this.logEntries.shift();
+        }
+        
+        this.updateLogDisplay();
+    }
+
+    updateLogDisplay() {
+        const logContainer = document.getElementById('simulation-log');
+        if (!logContainer) return;
+        
+        logContainer.innerHTML = this.logEntries.map(entry => {
+            const className = `log-entry ${entry.type}`;
+            return `<div class="${className}">[${entry.timestamp}] ${entry.message}</div>`;
+        }).join('');
+        
+        // Auto-scroll to bottom
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    clearLog() {
+        const logContainer = document.getElementById('simulation-log');
+        if (logContainer) {
+            logContainer.innerHTML = '';
+        }
+    }
+
+    async waitForResume() {
+        while (this.isPaused && this.isRunning) {
+            await this.sleep(100);
+        }
     }
 
     async start() {
@@ -761,10 +814,14 @@ function computeLPS(pattern) {
         this.isPaused = false;
         document.getElementById('start-btn').disabled = true;
         
+        this.addLog(`Starting ${this.algorithmName} simulation...`, 'highlight');
+        
         try {
             await this.runAlgorithm();
+            this.addLog('Simulation completed successfully!', 'success');
         } catch (error) {
             console.error('Algorithm error:', error);
+            this.addLog(`Error: ${error.message}`, 'error');
         }
         
         this.isRunning = false;
@@ -774,6 +831,12 @@ function computeLPS(pattern) {
     pause() {
         this.isPaused = !this.isPaused;
         document.getElementById('pause-btn').textContent = this.isPaused ? '▶ Resume' : '⏸ Pause';
+        
+        if (this.isPaused) {
+            this.addLog('Simulation paused', 'highlight');
+        } else {
+            this.addLog('Simulation resumed', 'normal');
+        }
     }
 
     reset() {
@@ -786,6 +849,7 @@ function computeLPS(pattern) {
             cancelAnimationFrame(this.animationFrame);
         }
         
+        this.addLog('Simulation reset', 'normal');
         this.initializeAlgorithm();
     }
 
@@ -922,33 +986,50 @@ function computeLPS(pattern) {
     // Sorting Algorithm Implementations
     async bubbleSort() {
         let n = this.data.length;
+        this.addLog(`Starting Bubble Sort on array of ${n} elements`, 'normal');
+        
         for (let i = 0; i < n - 1; i++) {
+            let swapped = false;
+            this.addLog(`Pass ${i + 1}: Starting iteration`, 'normal');
+            
             for (let j = 0; j < n - i - 1; j++) {
                 if (this.isPaused) await this.waitForResume();
                 
                 this.stats.comparisons++;
-                this.updateStatsDisplay();
-                
                 this.highlightIndices = [j, j + 1];
                 this.draw();
-                await this.sleep(50);
                 
                 if (this.data[j] > this.data[j + 1]) {
                     this.stats.swaps++;
+                    this.addLog(`Comparing indices ${j} and ${j+1}: ${this.data[j]} > ${this.data[j+1]}, swapping!`, 'normal');
                     [this.data[j], this.data[j + 1]] = [this.data[j + 1], this.data[j]];
                     this.draw();
                     await this.sleep(50);
+                    swapped = true;
+                } else {
+                    this.addLog(`Comparing indices ${j} and ${j+1}: ${this.data[j]} ≤ ${this.data[j+1]}, no swap`, 'normal');
+                    await this.sleep(30);
                 }
             }
+            
+            if (!swapped) {
+                this.addLog('Array is already sorted, early termination', 'success');
+                break;
+            }
         }
+        
         this.highlightIndices = [];
         this.draw();
+        this.addLog('Bubble Sort completed!', 'success');
     }
 
     async selectionSort() {
         let n = this.data.length;
+        this.addLog(`Starting Selection Sort on array of ${n} elements`, 'normal');
+        
         for (let i = 0; i < n - 1; i++) {
             let minIdx = i;
+            this.addLog(`Finding minimum element from index ${i} to ${n-1}`, 'normal');
             
             for (let j = i + 1; j < n; j++) {
                 if (this.isPaused) await this.waitForResume();
@@ -956,32 +1037,42 @@ function computeLPS(pattern) {
                 this.stats.comparisons++;
                 this.highlightIndices = [minIdx, j];
                 this.draw();
-                await this.sleep(50);
                 
                 if (this.data[j] < this.data[minIdx]) {
+                    this.addLog(`Found new minimum: ${this.data[j]} at index ${j} (was ${this.data[minIdx]} at ${minIdx})`, 'highlight');
                     minIdx = j;
                 }
+                
+                await this.sleep(30);
             }
             
             if (minIdx !== i) {
                 this.stats.swaps++;
+                this.addLog(`Swapping ${this.data[i]} with minimum ${this.data[minIdx]}`, 'normal');
                 [this.data[i], this.data[minIdx]] = [this.data[minIdx], this.data[i]];
                 this.draw();
                 await this.sleep(50);
+            } else {
+                this.addLog(`Element at index ${i} is already in correct position`, 'normal');
             }
         }
+        
         this.highlightIndices = [];
         this.draw();
+        this.addLog('Selection Sort completed!', 'success');
     }
 
     async insertionSort() {
         let n = this.data.length;
+        this.addLog(`Starting Insertion Sort on array of ${n} elements`, 'normal');
+        
         for (let i = 1; i < n; i++) {
             let key = this.data[i];
             let j = i - 1;
             
             this.highlightIndices = [i];
             this.draw();
+            this.addLog(`Taking element at index ${i} (value: ${key})`, 'normal');
             await this.sleep(50);
             
             while (j >= 0) {
@@ -990,23 +1081,27 @@ function computeLPS(pattern) {
                 this.stats.comparisons++;
                 this.highlightIndices = [j, j + 1];
                 this.draw();
-                await this.sleep(50);
                 
                 if (this.data[j] > key) {
                     this.stats.swaps++;
+                    this.addLog(`${this.data[j]} > ${key}, shifting ${this.data[j]} to right`, 'normal');
                     this.data[j + 1] = this.data[j];
                     j--;
                     this.draw();
                     await this.sleep(50);
                 } else {
+                    this.addLog(`${this.data[j]} ≤ ${key}, found correct position`, 'success');
                     break;
                 }
             }
             this.data[j + 1] = key;
+            this.addLog(`Inserted ${key} at position ${j + 1}`, 'highlight');
             this.draw();
         }
+        
         this.highlightIndices = [];
         this.draw();
+        this.addLog('Insertion Sort completed!', 'success');
     }
 
     async mergeSort(left, right) {
@@ -1226,6 +1321,7 @@ function computeLPS(pattern) {
     // Searching Algorithms
     async linearSearch() {
         let target = this.data[this.targetIndex];
+        this.addLog(`Starting Linear Search for value ${target}`, 'normal');
         
         for (let i = 0; i < this.data.length; i++) {
             if (this.isPaused) await this.waitForResume();
@@ -1233,15 +1329,20 @@ function computeLPS(pattern) {
             this.stats.comparisons++;
             this.highlightIndices = [i];
             this.draw();
-            await this.sleep(100);
             
             if (this.data[i] === target) {
+                this.addLog(`Found ${target} at index ${i}!`, 'success');
                 this.foundIndex = i;
                 this.draw();
                 await this.sleep(500);
                 return;
+            } else {
+                this.addLog(`Checking index ${i}: ${this.data[i]} ≠ ${target}`, 'normal');
+                await this.sleep(100);
             }
         }
+        
+        this.addLog('Element not found', 'error');
     }
 
     async binarySearch() {
@@ -1254,6 +1355,8 @@ function computeLPS(pattern) {
         let left = 0;
         let right = this.data.length - 1;
         
+        this.addLog(`Starting Binary Search for value ${target}`, 'normal');
+        
         while (left <= right) {
             if (this.isPaused) await this.waitForResume();
             
@@ -1261,19 +1364,25 @@ function computeLPS(pattern) {
             this.stats.comparisons++;
             this.highlightIndices = [left, mid, right];
             this.draw();
-            await this.sleep(100);
             
             if (this.data[mid] === target) {
+                this.addLog(`Found ${target} at index ${mid}!`, 'success');
                 this.foundIndex = mid;
                 this.draw();
                 await this.sleep(500);
                 return;
             } else if (this.data[mid] < target) {
+                this.addLog(`${this.data[mid]} < ${target}, searching right half`, 'normal');
                 left = mid + 1;
             } else {
+                this.addLog(`${this.data[mid]} > ${target}, searching left half`, 'normal');
                 right = mid - 1;
             }
+            
+            await this.sleep(100);
         }
+        
+        this.addLog('Element not found', 'error');
     }
 
     async jumpSearch() {
@@ -1404,6 +1513,8 @@ function computeLPS(pattern) {
         let visited = new Set();
         let queue = [startNode];
         
+        this.addLog(`Starting BFS from node ${startNode}`, 'normal');
+        
         visited.add(startNode);
         this.graph.nodes[startNode].visited = true;
         this.draw();
@@ -1415,6 +1526,7 @@ function computeLPS(pattern) {
             
             let current = queue.shift();
             this.stats.operations++;
+            this.addLog(`Visiting node ${current}`, 'normal');
             
             // Find neighbors
             let neighbors = this.graph.edges
@@ -1429,6 +1541,7 @@ function computeLPS(pattern) {
                     visited.add(neighbor);
                     this.graph.nodes[neighbor].visited = true;
                     this.currentEdge = { from: current, to: neighbor };
+                    this.addLog(`Exploring edge ${current} → ${neighbor}`, 'highlight');
                     this.draw();
                     await this.sleep(500);
                     
@@ -1436,13 +1549,17 @@ function computeLPS(pattern) {
                 }
             }
         }
+        
+        this.addLog('BFS traversal completed!', 'success');
     }
 
     async runDFS() {
         if (!this.graph || this.graph.nodes.length === 0) return;
         
+        this.addLog('Starting DFS traversal', 'normal');
         let visited = new Set();
         await this.dfsVisit(0, visited);
+        this.addLog('DFS traversal completed!', 'success');
     }
 
     async dfsVisit(node, visited) {
@@ -1453,6 +1570,7 @@ function computeLPS(pattern) {
         visited.add(node);
         this.graph.nodes[node].visited = true;
         this.stats.operations++;
+        this.addLog(`Visiting node ${node}`, 'normal');
         this.draw();
         await this.sleep(500);
         
@@ -1463,6 +1581,7 @@ function computeLPS(pattern) {
         for (let neighbor of neighbors) {
             if (!visited.has(neighbor) && this.isRunning) {
                 this.currentEdge = { from: node, to: neighbor };
+                this.addLog(`Exploring edge ${node} → ${neighbor}`, 'highlight');
                 await this.dfsVisit(neighbor, visited);
             }
         }
