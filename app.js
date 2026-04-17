@@ -144,6 +144,9 @@ class AlgorithmSimulator {
         this.algorithmName = algoName;
         this.algorithmCategory = category;
         
+        // Show warning for incomplete algorithms
+        showWarningForIncomplete(algoId);
+        
         this.reset();
         this.initializeAlgorithm();
         this.updateDescription();
@@ -1315,6 +1318,8 @@ function computeLPS(pattern) {
         const barWidth = (this.canvas.width - 40) / this.data.length;
         const maxHeight = this.canvas.height - 60;
         
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
         this.data.forEach((value, index) => {
             const height = (value / 320) * maxHeight;
             const x = 20 + index * barWidth;
@@ -1333,19 +1338,18 @@ function computeLPS(pattern) {
             
             this.ctx.fillRect(x, y, Math.max(barWidth - 2, 8), height);
             
-            // Draw value with better contrast
-            this.ctx.fillStyle = 'white';
+            // Draw value with black text for better contrast on light background
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 11px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            this.ctx.shadowBlur = 3;
             this.ctx.fillText(value.toString(), x + Math.max(barWidth - 2, 8) / 2, y - 8);
-            this.ctx.shadowBlur = 0;
         });
     }
 
     drawGraph() {
         if (!this.graph) return;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Draw edges first (behind nodes)
         this.graph.edges.forEach(edge => {
@@ -1362,7 +1366,7 @@ function computeLPS(pattern) {
                 this.ctx.strokeStyle = '#ff5722';
                 this.ctx.lineWidth = 4;
             } else {
-                this.ctx.strokeStyle = '#b0b0b0';
+                this.ctx.strokeStyle = '#999999';
                 this.ctx.lineWidth = 2;
             }
             
@@ -1379,7 +1383,7 @@ function computeLPS(pattern) {
             this.ctx.fill();
             
             // Weight text
-            this.ctx.fillStyle = '#333';
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 11px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
@@ -1400,24 +1404,23 @@ function computeLPS(pattern) {
             }
             
             this.ctx.fill();
-            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.strokeStyle = '#333333';
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
             
-            // Node value with better contrast
-            this.ctx.fillStyle = 'white';
+            // Node value with black text for better contrast
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            this.ctx.shadowBlur = 2;
             this.ctx.fillText(node.id.toString(), node.x, node.y);
-            this.ctx.shadowBlur = 0;
         });
     }
 
     drawTree() {
         if (!this.tree) return;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Draw edges first (behind nodes)
         this.tree.edges.forEach(edge => {
@@ -1446,19 +1449,16 @@ function computeLPS(pattern) {
             }
             
             this.ctx.fill();
-            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.strokeStyle = '#333333';
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
             
-            // Node value with better contrast
-            this.ctx.fillStyle = 'white';
+            // Node value with black text for better contrast
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            this.ctx.shadowBlur = 2;
             this.ctx.fillText(node.value.toString(), node.x, node.y);
-            this.ctx.shadowBlur = 0;
         });
     }
 
@@ -1468,11 +1468,13 @@ function computeLPS(pattern) {
         const startX = 30;
         const startY = this.canvas.height / 2 - boxHeight / 2;
         
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
         this.fibSequence.forEach((value, index) => {
             const x = startX + index * (boxWidth + 15);
             const y = startY;
             
-            // Box with gradient effect
+            // Box with solid color
             this.ctx.fillStyle = this.highlightIndices && this.highlightIndices.includes(index) 
                 ? '#ff5722' 
                 : '#667eea';
@@ -1480,19 +1482,16 @@ function computeLPS(pattern) {
             this.ctx.fillRect(x, y, boxWidth, boxHeight);
             
             // Border
-            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.strokeStyle = '#333333';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, y, boxWidth, boxHeight);
             
-            // Value text
-            this.ctx.fillStyle = 'white';
+            // Value text with black color for better contrast
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 18px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            this.ctx.shadowBlur = 2;
             this.ctx.fillText(value.toString(), x + boxWidth / 2, y + boxHeight / 2);
-            this.ctx.shadowBlur = 0;
             
             // Index label
             this.ctx.fillStyle = '#424242';
@@ -1503,6 +1502,8 @@ function computeLPS(pattern) {
 
     drawString() {
         if (!this.data || !this.data.text) return;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         const charWidth = 35;
         const charHeight = 35;
@@ -1525,19 +1526,16 @@ function computeLPS(pattern) {
             this.ctx.fillRect(x, textY - 20, charWidth, charHeight);
             
             // Border
-            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.strokeStyle = '#333333';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, textY - 20, charWidth, charHeight);
             
-            // Character text
-            this.ctx.fillStyle = 'white';
+            // Character text with black color for better contrast
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            this.ctx.shadowBlur = 2;
             this.ctx.fillText(char, x + charWidth / 2, textY - 2);
-            this.ctx.shadowBlur = 0;
             
             // Index below
             this.ctx.fillStyle = '#666';
@@ -1560,19 +1558,16 @@ function computeLPS(pattern) {
             this.ctx.fillRect(x, patternY - 20, charWidth, charHeight);
             
             // Border
-            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.strokeStyle = '#333333';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, patternY - 20, charWidth, charHeight);
             
-            // Character text
-            this.ctx.fillStyle = 'white';
+            // Character text with black color for better contrast
+            this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            this.ctx.shadowBlur = 2;
             this.ctx.fillText(char, x + charWidth / 2, patternY - 2);
-            this.ctx.shadowBlur = 0;
             
             // Index below
             this.ctx.fillStyle = '#666';
@@ -1586,3 +1581,16 @@ function computeLPS(pattern) {
 document.addEventListener('DOMContentLoaded', () => {
     window.simulator = new AlgorithmSimulator();
 });
+
+// Warning modal close function
+function closeWarning() {
+    document.getElementById('warning-modal').classList.remove('active');
+}
+
+// Show warning for incomplete algorithms
+function showWarningForIncomplete(algoId) {
+    const incompleteAlgorithms = ['avlTree', 'redBlackTree', 'matrixChain', 'manacher', 'zAlgorithm'];
+    if (incompleteAlgorithms.includes(algoId)) {
+        document.getElementById('warning-modal').classList.add('active');
+    }
+}
