@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Algorithm Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>🔬 Visual Algorithm Simulator</h1>
+        <p>Interactive visualizations for learning algorithms</p>
+    </header>
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-category="sorting">Sorting</button>
+        <button class="nav-btn" data-category="searching">Searching</button>
+        <button class="nav-btn" data-category="graph">Graph Algorithms</button>
+        <button class="nav-btn" data-category="dynamic">Dynamic Programming</button>
+        <button class="nav-btn" data-category="tree">Tree Algorithms</button>
+        <button class="nav-btn" data-category="string">String Algorithms</button>
+    </nav>
+
+    <main>
+        <section id="algorithm-selector" class="selector-section">
+            <h2>Select an Algorithm</h2>
+            <div id="algorithm-buttons" class="algorithm-buttons"></div>
+        </section>
+
+        <section id="visualization" class="visualization-section">
+            <div class="controls">
+                <button id="start-btn" class="control-btn">▶ Start</button>
+                <button id="pause-btn" class="control-btn">⏸ Pause</button>
+                <button id="reset-btn" class="control-btn">🔄 Reset</button>
+                <label>
+                    Speed: 
+                    <input type="range" id="speed-slider" min="1" max="100" value="50">
+                </label>
+                <div id="stats" class="stats"></div>
+            </div>
+            <div id="canvas-container" class="canvas-container">
+                <canvas id="algo-canvas"></canvas>
+            </div>
+            <div id="description" class="description"></div>
+        </section>
+
+        <section id="code-display" class="code-section">
+            <h3>Algorithm Code</h3>
+            <pre><code id="algorithm-code"></code></pre>
+        </section>
+    </main>
+
+    <footer>
+        <p>Visual Algorithm Simulator - Learn algorithms through interactive visualization</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
