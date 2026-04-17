@@ -1896,6 +1896,13 @@ function computeLPS(pattern) {
         let n = 10;
         let fib = [0, 1];
         
+        this.fibSequence = [0, 1];
+        this.highlightIndices = [];
+        
+        // Initial draw
+        this.draw();
+        this.addLog('Starting Fibonacci sequence: F(0)=0, F(1)=1', 'highlight');
+        
         for (let i = 2; i <= n && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
             if (!this.isRunning) return;
@@ -1904,9 +1911,14 @@ function computeLPS(pattern) {
             this.stats.operations++;
             this.fibSequence = fib.slice(0, i + 1);
             this.highlightIndices = [i - 1, i - 2];
+            this.addLog(`F(${i}) = F(${i-1}) + F(${i-2}) = ${fib[i-1]} + ${fib[i-2]} = ${fib[i]}`, 'highlight');
             this.draw();
             await this.sleep(500);
         }
+        
+        this.addLog(`Fibonacci sequence complete! F(${n}) = ${fib[n]}`, 'success');
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeLCS() {
@@ -1916,6 +1928,10 @@ function computeLPS(pattern) {
         const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
         
         this.lcsData = { s1, s2, dp, currentI: 0, currentJ: 0 };
+        
+        // Initial draw
+        this.draw();
+        this.addLog('Finding Longest Common Subsequence', 'highlight');
         
         for (let i = 1; i <= m && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
@@ -1929,8 +1945,10 @@ function computeLPS(pattern) {
                 
                 if (s1[i - 1] === s2[j - 1]) {
                     dp[i][j] = dp[i - 1][j - 1] + 1;
+                    this.addLog(`Match: '${s1[i-1]}' == '${s2[j-1]}', LCS length = ${dp[i][j]}`, 'highlight');
                 } else {
                     dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    this.addLog(`No match: max(LCS[${i-1}][${j}], LCS[${i}][${j-1}]) = ${dp[i][j]}`, 'highlight');
                 }
                 
                 this.stats.operations++;
@@ -1938,6 +1956,10 @@ function computeLPS(pattern) {
                 await this.sleep(100);
             }
         }
+        
+        this.addLog(`LCS length: ${dp[m][n]}`, 'success');
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeKnapsack() {
@@ -1948,6 +1970,9 @@ function computeLPS(pattern) {
         const dp = Array(n + 1).fill(null).map(() => Array(capacity + 1).fill(0));
         
         this.knapsackData = { weights, values, capacity, dp, currentI: 0, currentW: 0 };
+        
+        // Initial draw
+        this.draw();
         
         for (let i = 1; i <= n && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
@@ -1966,10 +1991,15 @@ function computeLPS(pattern) {
                 }
                 
                 this.stats.operations++;
+                this.addLog(`Item ${i}, Capacity ${w}: Value = ${dp[i][w]}`, 'highlight');
                 this.draw();
                 await this.sleep(80);
             }
         }
+        
+        this.addLog(`Maximum value: ${dp[n][capacity]}`, 'success');
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeCoinChange() {
@@ -1980,11 +2010,15 @@ function computeLPS(pattern) {
         
         this.coinData = { coins, amount, dp, currentCoin: 0, currentAmt: 0 };
         
+        // Initial draw
+        this.draw();
+        
         for (let coin of coins) {
             if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
             
             this.coinData.currentCoin = coin;
+            this.addLog(`Using coin: ${coin}`, 'highlight');
             
             for (let a = coin; a <= amount && this.isRunning; a++) {
                 if (!this.isRunning) return;
@@ -1993,6 +2027,7 @@ function computeLPS(pattern) {
                 
                 if (dp[a - coin] !== Infinity) {
                     dp[a] = Math.min(dp[a], dp[a - coin] + 1);
+                    this.addLog(`Amount ${a}: min coins = ${dp[a]}`, 'highlight');
                 }
                 
                 this.stats.operations++;
@@ -2000,6 +2035,10 @@ function computeLPS(pattern) {
                 await this.sleep(150);
             }
         }
+        
+        this.addLog(`Minimum coins needed: ${dp[amount]}`, 'success');
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeEditDistance() {
@@ -2013,6 +2052,9 @@ function computeLPS(pattern) {
         
         this.editData = { s1, s2, dp, currentI: 0, currentJ: 0 };
         
+        // Initial draw
+        this.draw();
+        
         for (let i = 1; i <= m && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
             if (!this.isRunning) return;
@@ -2025,8 +2067,10 @@ function computeLPS(pattern) {
                 
                 if (s1[i - 1] === s2[j - 1]) {
                     dp[i][j] = dp[i - 1][j - 1];
+                    this.addLog(`Match: '${s1[i-1]}' == '${s2[j-1]}', dp[${i}][${j}] = ${dp[i][j]}`, 'highlight');
                 } else {
                     dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+                    this.addLog(`Edit: dp[${i}][${j}] = 1 + min(${dp[i-1][j]}, ${dp[i][j-1]}, ${dp[i-1][j-1]})`, 'highlight');
                 }
                 
                 this.stats.operations++;
@@ -2034,6 +2078,10 @@ function computeLPS(pattern) {
                 await this.sleep(80);
             }
         }
+        
+        this.addLog(`Edit distance: ${dp[m][n]}`, 'success');
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeMatrixChain() {
@@ -2043,11 +2091,15 @@ function computeLPS(pattern) {
         
         this.matrixData = { dims, dp, currentLen: 0, currentI: 0, currentJ: 0 };
         
+        // Initial draw
+        this.draw();
+        
         for (let len = 2; len <= n && this.isRunning; len++) {
             if (this.isPaused) await this.waitForResume();
             if (!this.isRunning) return;
             
             this.matrixData.currentLen = len;
+            this.addLog(`Chain length: ${len}`, 'highlight');
             
             for (let i = 1; i <= n - len + 1 && this.isRunning; i++) {
                 if (!this.isRunning) return;
@@ -2063,6 +2115,7 @@ function computeLPS(pattern) {
                     
                     const cost = dp[i][k] + dp[k + 1][j] + dims[i - 1] * dims[k] * dims[j];
                     dp[i][j] = Math.min(dp[i][j], cost);
+                    this.addLog(`Split at ${k}: cost = ${cost}`, 'highlight');
                     
                     this.stats.operations++;
                     this.draw();
@@ -2070,6 +2123,10 @@ function computeLPS(pattern) {
                 }
             }
         }
+        
+        this.addLog(`Minimum multiplications: ${dp[1][n]}`, 'success');
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeBST() {
@@ -2593,6 +2650,8 @@ function computeLPS(pattern) {
     }
 
     drawArray() {
+        if (!this.data || !Array.isArray(this.data)) return;
+        
         const barWidth = (this.canvas.width - 40) / this.data.length;
         const maxHeight = this.canvas.height - 60;
         const showLabels = this.data.length <= 20;
