@@ -1409,8 +1409,9 @@ function computeLPS(pattern) {
         this.draw();
         await this.sleep(500);
         
-        while (queue.length > 0) {
+        while (queue.length > 0 && this.isRunning) {
             if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
             
             let current = queue.shift();
             this.stats.operations++;
@@ -1421,8 +1422,9 @@ function computeLPS(pattern) {
                 .map(e => e.to);
             
             for (let neighbor of neighbors) {
-                if (!visited.has(neighbor)) {
+                if (!visited.has(neighbor) && this.isRunning) {
                     if (this.isPaused) await this.waitForResume();
+                    if (!this.isRunning) return;
                     
                     visited.add(neighbor);
                     this.graph.nodes[neighbor].visited = true;
@@ -1444,7 +1446,9 @@ function computeLPS(pattern) {
     }
 
     async dfsVisit(node, visited) {
+        if (!this.isRunning) return;
         if (this.isPaused) await this.waitForResume();
+        if (!this.isRunning) return;
         
         visited.add(node);
         this.graph.nodes[node].visited = true;
@@ -1457,9 +1461,286 @@ function computeLPS(pattern) {
             .map(e => e.to);
         
         for (let neighbor of neighbors) {
-            if (!visited.has(neighbor)) {
+            if (!visited.has(neighbor) && this.isRunning) {
                 this.currentEdge = { from: node, to: neighbor };
                 await this.dfsVisit(neighbor, visited);
+            }
+        }
+    }
+
+    async runDijkstra() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const startNode = 0;
+        const distances = this.graph.nodes.map(() => Infinity);
+        distances[startNode] = 0;
+        const visited = new Set();
+        const pq = [{ node: startNode, dist: 0 }];
+        
+        while (pq.length > 0 && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            pq.sort((a, b) => a.dist - b.dist);
+            const current = pq.shift();
+            const node = current.node;
+            
+            if (visited.has(node)) continue;
+            
+            visited.add(node);
+            this.currentNode = node;
+            this.graph.nodes[node].distance = distances[node];
+            this.draw();
+            this.stats.operations++;
+            await this.sleep(400);
+            
+            const neighbors = this.graph.edges.filter(e => e.from === node);
+            for (const edge of neighbors) {
+                if (this.isRunning && !visited.has(edge.to)) {
+                    this.currentEdge = { from: node, to: edge.to };
+                    const newDist = distances[node] + edge.weight;
+                    if (newDist < distances[edge.to]) {
+                        distances[edge.to] = newDist;
+                        pq.push({ node: edge.to, dist: newDist });
+                        this.graph.nodes[edge.to].distance = newDist;
+                        this.draw();
+                        await this.sleep(200);
+                    }
+                }
+            }
+        }
+    }
+
+    async runBellmanFord() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const startNode = 0;
+        const distances = this.graph.nodes.map(() => Infinity);
+        distances[startNode] = 0;
+        
+        for (let i = 0; i < this.graph.nodes.length - 1 && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            let updated = false;
+            for (const edge of this.graph.edges) {
+                if (!this.isRunning) return;
+                
+                this.currentEdge = edge;
+                this.currentNode = edge.from;
+                
+                if (distances[edge.from] !== Infinity && distances[edge.from] + edge.weight < distances[edge.to]) {
+                    distances[edge.to] = distances[edge.from] + edge.weight;
+                    this.graph.nodes[edge.to].distance = distances[edge.to];
+                    updated = true;
+                    this.stats.operations++;
+                    this.draw();
+                    await this.sleep(150);
+                }
+            }
+            
+            if (!updated) break;
+        }
+    }
+
+    async runFloydWarshall() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const n = this.graph.nodes.length;
+        const dist = Array(n).fill(null).map(() => Array(n).fill(Infinity));
+        
+        for (let i = 0; i < n; i++) dist[i][i] = 0;
+        for (const edge of this.graph.edges) {
+            dist[edge.from][edge.to] = edge.weight;
+        }
+        
+        for (let k = 0; k < n && this.isRunning; k++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            this.currentNode = k;
+            this.draw();
+            await this.sleep(300);
+            
+            for (let i = 0; i < n && this.isRunning; i++) {
+                for (let j = 0; j < n && this.isRunning; j++) {
+                    if (dist[i][k] !== Infinity && dist[k][j] !== Infinity && dist[i][k] + dist[k][j] < dist[i][j]) {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                        this.stats.operations++;
+                        this.draw();
+                        await this.sleep(50);
+                    }
+                }
+            }
+        }
+    }
+
+    async runKruskal() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const edges = [...this.graph.edges].sort((a, b) => a.weight - b.weight);
+        const parent = this.graph.nodes.map((_, i) => i);
+        const mst = [];
+        
+        const find = (x) => {
+            if (parent[x] !== x) parent[x] = find(parent[x]);
+            return parent[x];
+        };
+        
+        const union = (x, y) => {
+            const px = find(x), py = find(y);
+            if (px !== py) { parent[px] = py; return true; }
+            return false;
+        };
+        
+        for (const edge of edges) {
+            if (!this.isRunning) return;
+            if (this.isPaused) await this.waitForResume();
+            
+            this.currentEdge = edge;
+            this.draw();
+            
+            if (union(edge.from, edge.to)) {
+                mst.push(edge);
+                this.stats.operations++;
+                await this.sleep(400);
+            } else {
+                await this.sleep(200);
+            }
+            
+            if (mst.length === this.graph.nodes.length - 1) break;
+        }
+    }
+
+    async runPrim() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const startNode = 0;
+        const visited = new Set([startNode]);
+        const mst = [];
+        const pq = [];
+        
+        // Add edges from start node
+        this.graph.edges.filter(e => e.from === startNode).forEach(e => {
+            pq.push(e);
+        });
+        
+        while (pq.length > 0 && this.isRunning && visited.size < this.graph.nodes.length) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            pq.sort((a, b) => a.weight - b.weight);
+            const edge = pq.shift();
+            
+            this.currentEdge = edge;
+            
+            if (!visited.has(edge.to)) {
+                visited.add(edge.to);
+                mst.push(edge);
+                this.graph.nodes[edge.to].visited = true;
+                this.stats.operations++;
+                this.draw();
+                await this.sleep(400);
+                
+                // Add edges from new node
+                this.graph.edges.filter(e => e.from === edge.to && !visited.has(e.to)).forEach(e => {
+                    pq.push(e);
+                });
+            } else {
+                await this.sleep(200);
+            }
+        }
+    }
+
+    async runTopologicalSort() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const inDegree = this.graph.nodes.map(() => 0);
+        for (const edge of this.graph.edges) {
+            inDegree[edge.to]++;
+        }
+        
+        const queue = [];
+        for (let i = 0; i < this.graph.nodes.length; i++) {
+            if (inDegree[i] === 0) queue.push(i);
+        }
+        
+        const result = [];
+        
+        while (queue.length > 0 && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            const node = queue.shift();
+            this.currentNode = node;
+            this.graph.nodes[node].visited = true;
+            result.push(node);
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(400);
+            
+            const neighbors = this.graph.edges.filter(e => e.from === node);
+            for (const edge of neighbors) {
+                if (this.isRunning) {
+                    inDegree[edge.to]--;
+                    if (inDegree[edge.to] === 0) {
+                        queue.push(edge.to);
+                    }
+                    this.currentEdge = edge;
+                    this.draw();
+                    await this.sleep(150);
+                }
+            }
+        }
+    }
+
+    async runAStar() {
+        if (!this.graph || this.graph.nodes.length === 0) return;
+        
+        const startNode = 0;
+        const goalNode = this.graph.nodes.length - 1;
+        const openSet = [{ node: startNode, g: 0, h: 0, f: 0 }];
+        const cameFrom = {};
+        const gScore = this.graph.nodes.map(() => Infinity);
+        gScore[startNode] = 0;
+        
+        const heuristic = (a, b) => {
+            const na = this.graph.nodes[a], nb = this.graph.nodes[b];
+            return Math.sqrt(Math.pow(na.x - nb.x, 2) + Math.pow(na.y - nb.y, 2));
+        };
+        
+        while (openSet.length > 0 && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            openSet.sort((a, b) => a.f - b.f);
+            const current = openSet.shift();
+            const node = current.node;
+            
+            this.currentNode = node;
+            this.graph.nodes[node].visited = true;
+            this.draw();
+            this.stats.operations++;
+            await this.sleep(300);
+            
+            if (node === goalNode) break;
+            
+            const neighbors = this.graph.edges.filter(e => e.from === node);
+            for (const edge of neighbors) {
+                if (this.isRunning) {
+                    this.currentEdge = edge;
+                    const tentativeG = gScore[node] + edge.weight;
+                    
+                    if (tentativeG < gScore[edge.to]) {
+                        cameFrom[edge.to] = node;
+                        gScore[edge.to] = tentativeG;
+                        const h = heuristic(edge.to, goalNode);
+                        const f = tentativeG + h;
+                        openSet.push({ node: edge.to, g: tentativeG, h, f });
+                        this.draw();
+                        await this.sleep(150);
+                    }
+                }
             }
         }
     }
@@ -1468,8 +1749,9 @@ function computeLPS(pattern) {
         let n = 10;
         let fib = [0, 1];
         
-        for (let i = 2; i <= n; i++) {
+        for (let i = 2; i <= n && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
             
             fib[i] = fib[i - 1] + fib[i - 2];
             this.stats.operations++;
@@ -1478,6 +1760,639 @@ function computeLPS(pattern) {
             this.draw();
             await this.sleep(500);
         }
+    }
+
+    async visualizeLCS() {
+        const s1 = "ABCDGH";
+        const s2 = "AEDFHR";
+        const m = s1.length, n = s2.length;
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        this.lcsData = { s1, s2, dp, currentI: 0, currentJ: 0 };
+        
+        for (let i = 1; i <= m && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            for (let j = 1; j <= n && this.isRunning; j++) {
+                if (!this.isRunning) return;
+                
+                this.lcsData.currentI = i;
+                this.lcsData.currentJ = j;
+                
+                if (s1[i - 1] === s2[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+                
+                this.stats.operations++;
+                this.draw();
+                await this.sleep(100);
+            }
+        }
+    }
+
+    async visualizeKnapsack() {
+        const weights = [2, 3, 4, 5];
+        const values = [3, 4, 5, 6];
+        const capacity = 8;
+        const n = weights.length;
+        const dp = Array(n + 1).fill(null).map(() => Array(capacity + 1).fill(0));
+        
+        this.knapsackData = { weights, values, capacity, dp, currentI: 0, currentW: 0 };
+        
+        for (let i = 1; i <= n && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            for (let w = 0; w <= capacity && this.isRunning; w++) {
+                if (!this.isRunning) return;
+                
+                this.knapsackData.currentI = i;
+                this.knapsackData.currentW = w;
+                
+                if (weights[i - 1] <= w) {
+                    dp[i][w] = Math.max(dp[i - 1][w], values[i - 1] + dp[i - 1][w - weights[i - 1]]);
+                } else {
+                    dp[i][w] = dp[i - 1][w];
+                }
+                
+                this.stats.operations++;
+                this.draw();
+                await this.sleep(80);
+            }
+        }
+    }
+
+    async visualizeCoinChange() {
+        const coins = [1, 2, 5];
+        const amount = 11;
+        const dp = Array(amount + 1).fill(Infinity);
+        dp[0] = 0;
+        
+        this.coinData = { coins, amount, dp, currentCoin: 0, currentAmt: 0 };
+        
+        for (let coin of coins) {
+            if (!this.isRunning) return;
+            if (this.isPaused) await this.waitForResume();
+            
+            this.coinData.currentCoin = coin;
+            
+            for (let a = coin; a <= amount && this.isRunning; a++) {
+                if (!this.isRunning) return;
+                
+                this.coinData.currentAmt = a;
+                
+                if (dp[a - coin] !== Infinity) {
+                    dp[a] = Math.min(dp[a], dp[a - coin] + 1);
+                }
+                
+                this.stats.operations++;
+                this.draw();
+                await this.sleep(150);
+            }
+        }
+    }
+
+    async visualizeEditDistance() {
+        const s1 = "INTENTION";
+        const s2 = "EXECUTION";
+        const m = s1.length, n = s2.length;
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        
+        this.editData = { s1, s2, dp, currentI: 0, currentJ: 0 };
+        
+        for (let i = 1; i <= m && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            for (let j = 1; j <= n && this.isRunning; j++) {
+                if (!this.isRunning) return;
+                
+                this.editData.currentI = i;
+                this.editData.currentJ = j;
+                
+                if (s1[i - 1] === s2[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1];
+                } else {
+                    dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+                }
+                
+                this.stats.operations++;
+                this.draw();
+                await this.sleep(80);
+            }
+        }
+    }
+
+    async visualizeMatrixChain() {
+        const dims = [10, 20, 30, 40, 30];
+        const n = dims.length - 1;
+        const dp = Array(n + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        this.matrixData = { dims, dp, currentLen: 0, currentI: 0, currentJ: 0 };
+        
+        for (let len = 2; len <= n && this.isRunning; len++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            this.matrixData.currentLen = len;
+            
+            for (let i = 1; i <= n - len + 1 && this.isRunning; i++) {
+                if (!this.isRunning) return;
+                
+                const j = i + len - 1;
+                this.matrixData.currentI = i;
+                this.matrixData.currentJ = j;
+                
+                dp[i][j] = Infinity;
+                
+                for (let k = i; k < j && this.isRunning; k++) {
+                    if (!this.isRunning) return;
+                    
+                    const cost = dp[i][k] + dp[k + 1][j] + dims[i - 1] * dims[k] * dims[j];
+                    dp[i][j] = Math.min(dp[i][j], cost);
+                    
+                    this.stats.operations++;
+                    this.draw();
+                    await this.sleep(100);
+                }
+            }
+        }
+    }
+
+    async visualizeBST() {
+        const values = [50, 30, 70, 20, 40, 60, 80];
+        this.bstNodes = [];
+        this.bstEdges = [];
+        
+        const insertNode = async (value) => {
+            if (!this.isRunning) return;
+            if (this.isPaused) await this.waitForResume();
+            
+            const newNode = { id: this.bstNodes.length, value, x: 0, y: 0, visited: false };
+            this.bstNodes.push(newNode);
+            
+            if (this.bstNodes.length === 1) {
+                newNode.x = this.canvas.width / 2;
+                newNode.y = 60;
+            } else {
+                // Simple positioning
+                const parentIdx = Math.floor((this.bstNodes.length - 2) / 2);
+                const parent = this.bstNodes[parentIdx];
+                const isLeft = value < parent.value;
+                const level = Math.floor(Math.log2(this.bstNodes.length)) + 1;
+                const spacing = this.canvas.width / Math.pow(2, level);
+                
+                newNode.y = parent.y + 70;
+                newNode.x = isLeft ? parent.x - spacing : parent.x + spacing;
+                
+                this.bstEdges.push({ from: parentIdx, to: this.bstNodes.length - 1 });
+            }
+            
+            this.currentNode = this.bstNodes.length - 1;
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(400);
+        };
+        
+        for (const val of values) {
+            await insertNode(val);
+        }
+    }
+
+    async visualizeAVL() {
+        // Simplified AVL visualization showing basic insertions
+        const values = [30, 20, 40, 10, 25];
+        this.avlNodes = [];
+        this.avlEdges = [];
+        
+        for (let i = 0; i < values.length && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            const node = { id: i, value: values[i], x: 50 + i * 80, y: 100 + (i % 3) * 80, visited: true };
+            this.avlNodes.push(node);
+            
+            if (i > 0) {
+                this.avlEdges.push({ from: i - 1, to: i });
+            }
+            
+            this.currentNode = i;
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(500);
+        }
+    }
+
+    async visualizeRedBlack() {
+        // Simplified Red-Black Tree visualization
+        const values = [41, 38, 31, 12, 19, 8];
+        this.rbNodes = [];
+        this.rbEdges = [];
+        
+        for (let i = 0; i < values.length && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            const isRed = i % 2 === 0;
+            const node = { 
+                id: i, 
+                value: values[i], 
+                x: 50 + i * 80, 
+                y: 100 + (i % 3) * 80, 
+                visited: true,
+                color: isRed ? 'red' : 'black'
+            };
+            this.rbNodes.push(node);
+            
+            if (i > 0) {
+                this.rbEdges.push({ from: i - 1, to: i });
+            }
+            
+            this.currentNode = i;
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(500);
+        }
+    }
+
+    async visualizeTreeTraversals() {
+        // Show inorder traversal animation
+        const values = [50, 30, 70, 20, 40, 60, 80];
+        this.traversalOrder = [];
+        this.treeNodes = values.map((v, i) => ({
+            id: i,
+            value: v,
+            x: 50 + (i % 4) * 100,
+            y: 50 + Math.floor(i / 4) * 80,
+            visited: false
+        }));
+        
+        for (let i = 0; i < this.treeNodes.length && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            this.treeNodes[i].visited = true;
+            this.traversalOrder.push(this.treeNodes[i].value);
+            this.currentNode = i;
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(400);
+        }
+    }
+
+    async visualizeHeapOps() {
+        const values = [4, 10, 3, 5, 1];
+        this.heapArray = [...values];
+        
+        // Build max heap
+        for (let i = Math.floor(values.length / 2) - 1; i >= 0 && this.isRunning; i--) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            await this.heapifyDown(i, values.length);
+        }
+    }
+
+    async heapifyDown(i, n) {
+        let largest = i;
+        const left = 2 * i + 1;
+        const right = 2 * i + 2;
+        
+        this.highlightIndices = [i];
+        this.draw();
+        await this.sleep(300);
+        
+        if (left < n && this.heapArray[left] > this.heapArray[largest]) {
+            largest = left;
+        }
+        if (right < n && this.heapArray[right] > this.heapArray[largest]) {
+            largest = right;
+        }
+        
+        if (largest !== i) {
+            [this.heapArray[i], this.heapArray[largest]] = [this.heapArray[largest], this.heapArray[i]];
+            this.stats.swaps++;
+            this.highlightIndices = [i, largest];
+            this.draw();
+            await this.sleep(400);
+            await this.heapifyDown(largest, n);
+        }
+    }
+
+    async visualizeTrie() {
+        const words = ["CAT", "CAR", "CART", "DOG"];
+        this.trieNodes = [{ id: 0, char: 'root', x: this.canvas.width / 2, y: 50, visited: false }];
+        this.trieEdges = [];
+        
+        let nodeId = 1;
+        const levelHeight = 70;
+        
+        for (const word of words) {
+            if (!this.isRunning) return;
+            if (this.isPaused) await this.waitForResume();
+            
+            let parentId = 0;
+            let x = this.trieNodes[0].x;
+            let y = this.trieNodes[0].y;
+            
+            for (let c = 0; c < word.length && this.isRunning; c++) {
+                const char = word[c];
+                const newNode = {
+                    id: nodeId,
+                    char: char,
+                    x: x + (c - 1) * 40,
+                    y: y + levelHeight,
+                    visited: true
+                };
+                
+                this.trieNodes.push(newNode);
+                this.trieEdges.push({ from: parentId, to: nodeId });
+                
+                this.currentNode = nodeId;
+                parentId = nodeId;
+                x = newNode.x;
+                y = newNode.y;
+                nodeId++;
+                
+                this.stats.operations++;
+                this.draw();
+                await this.sleep(300);
+            }
+        }
+    }
+
+    async naiveSearch() {
+        const text = this.data.text;
+        const pattern = this.data.pattern;
+        const n = text.length;
+        const m = pattern.length;
+        
+        for (let i = 0; i <= n - m && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            this.data.textIndex = i;
+            let j;
+            
+            for (j = 0; j < m && this.isRunning; j++) {
+                if (!this.isRunning) return;
+                
+                this.data.patternIndex = j;
+                this.compareIndices = [i + j];
+                this.stats.comparisons++;
+                this.draw();
+                await this.sleep(200);
+                
+                if (text[i + j] !== pattern[j]) {
+                    break;
+                }
+            }
+            
+            if (j === m) {
+                this.foundIndex = i;
+                this.draw();
+                await this.sleep(500);
+                return;
+            }
+        }
+    }
+
+    async kmpSearch() {
+        const text = this.data.text;
+        const pattern = this.data.pattern;
+        const n = text.length;
+        const m = pattern.length;
+        
+        // Compute LPS array
+        const lps = Array(m).fill(0);
+        let len = 0, i = 1;
+        
+        while (i < m && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            if (pattern[i] === pattern[len]) {
+                len++;
+                lps[i] = len;
+                i++;
+            } else {
+                if (len !== 0) {
+                    len = lps[len - 1];
+                } else {
+                    lps[i] = 0;
+                    i++;
+                }
+            }
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(150);
+        }
+        
+        // Search using LPS
+        i = 0;
+        let j = 0;
+        
+        while (i < n && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            this.data.textIndex = i;
+            this.data.patternIndex = j;
+            
+            if (pattern[j] === text[i]) {
+                i++;
+                j++;
+                this.stats.comparisons++;
+                this.draw();
+                await this.sleep(200);
+                
+                if (j === m) {
+                    this.foundIndex = i - j;
+                    this.draw();
+                    await this.sleep(500);
+                    return;
+                }
+            } else {
+                if (j !== 0) {
+                    j = lps[j - 1];
+                } else {
+                    i++;
+                }
+            }
+        }
+    }
+
+    async rabinKarpSearch() {
+        const text = this.data.text;
+        const pattern = this.data.pattern;
+        const n = text.length;
+        const m = pattern.length;
+        const prime = 101;
+        const d = 256;
+        
+        let patternHash = 0, textHash = 0, h = 1;
+        
+        for (let i = 0; i < m - 1; i++) {
+            h = (h * d) % prime;
+        }
+        
+        for (let i = 0; i < m; i++) {
+            patternHash = (d * patternHash + pattern[i].charCodeAt(0)) % prime;
+            textHash = (d * textHash + text[i].charCodeAt(0)) % prime;
+        }
+        
+        for (let i = 0; i <= n - m && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            this.data.textIndex = i;
+            
+            if (patternHash === textHash) {
+                let match = true;
+                for (let j = 0; j < m; j++) {
+                    if (!this.isRunning) return;
+                    
+                    this.data.patternIndex = j;
+                    this.compareIndices = [i + j];
+                    this.stats.comparisons++;
+                    this.draw();
+                    await this.sleep(150);
+                    
+                    if (text[i + j] !== pattern[j]) {
+                        match = false;
+                        break;
+                    }
+                }
+                
+                if (match) {
+                    this.foundIndex = i;
+                    this.draw();
+                    await this.sleep(500);
+                    return;
+                }
+            }
+            
+            if (i < n - m) {
+                textHash = (d * (textHash - text[i].charCodeAt(0) * h) + text[i + m].charCodeAt(0)) % prime;
+                if (textHash < 0) textHash += prime;
+            }
+            
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(100);
+        }
+    }
+
+    async zAlgorithmSearch() {
+        const text = this.data.text.join('');
+        const pattern = this.data.pattern.join('');
+        const combined = pattern + '$' + text;
+        const n = combined.length;
+        const m = pattern.length;
+        const z = Array(n).fill(0);
+        
+        let l = 0, r = 0;
+        
+        for (let i = 1; i < n && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            if (i > r) {
+                l = r = i;
+                while (r < n && combined[r - l] === combined[r]) {
+                    if (!this.isRunning) return;
+                    r++;
+                    this.stats.comparisons++;
+                }
+                z[i] = r - l;
+                if (z[i] === m) {
+                    this.foundIndex = i - m - 1;
+                    this.draw();
+                    await this.sleep(500);
+                    return;
+                }
+            } else {
+                const k = i - l;
+                if (z[k] < r - i + 1) {
+                    z[i] = z[k];
+                } else {
+                    l = i;
+                    while (r < n && combined[r - l] === combined[r]) {
+                        if (!this.isRunning) return;
+                        r++;
+                        this.stats.comparisons++;
+                    }
+                    z[i] = r - l;
+                    if (z[i] === m) {
+                        this.foundIndex = i - m - 1;
+                        this.draw();
+                        await this.sleep(500);
+                        return;
+                    }
+                }
+            }
+            
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(100);
+        }
+    }
+
+    async manacherSearch() {
+        const text = this.data.text.join('');
+        const transformed = '#' + text.split('').join('#') + '#';
+        const n = transformed.length;
+        const p = Array(n).fill(0);
+        
+        let center = 0, right = 0;
+        
+        for (let i = 0; i < n && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (!this.isRunning) return;
+            
+            const mirror = 2 * center - i;
+            
+            if (i < right) {
+                p[i] = Math.min(right - i, p[mirror]);
+            }
+            
+            let a = i + p[i] + 1, b = i - p[i] - 1;
+            while (a < n && b >= 0 && transformed[a] === transformed[b]) {
+                if (!this.isRunning) return;
+                p[i]++;
+                a++;
+                b--;
+                this.stats.comparisons++;
+            }
+            
+            if (i + p[i] > right) {
+                center = i;
+                right = i + p[i];
+            }
+            
+            this.stats.operations++;
+            this.draw();
+            await this.sleep(100);
+        }
+        
+        // Find the longest palindrome
+        let maxLen = 0, centerIndex = 0;
+        for (let i = 0; i < n; i++) {
+            if (p[i] > maxLen) {
+                maxLen = p[i];
+                centerIndex = i;
+            }
+        }
+        
+        this.foundIndex = Math.floor((centerIndex - maxLen) / 2);
+        this.draw();
+        await this.sleep(500);
     }
 
     waitForResume() {
