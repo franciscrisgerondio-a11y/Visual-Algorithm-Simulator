@@ -137,6 +137,14 @@ class AlgorithmSimulator {
     }
 
     selectAlgorithm(algoId, algoName, category) {
+        // CRITICAL FIX: Stop any running simulation immediately
+        this.isRunning = false;
+        this.isPaused = false;
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
+        
         document.querySelectorAll('.algo-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`[data-id="${algoId}"]`).classList.add('active');
         
