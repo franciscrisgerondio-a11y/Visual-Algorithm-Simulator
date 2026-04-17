@@ -173,6 +173,14 @@ class AlgorithmSimulator {
         this.graph = null;
         this.tree = null;
         
+        // Clear all DP data structures
+        this.fibSequence = null;
+        this.lcsData = null;
+        this.knapsackData = null;
+        this.coinData = null;
+        this.editData = null;
+        this.matrixData = null;
+        
         switch(this.algorithmCategory) {
             case 'sorting':
             case 'searching':
@@ -225,13 +233,20 @@ class AlgorithmSimulator {
             });
         }
         
-        // Create random edges
+        // Create random edges with guaranteed connectivity
+        // First create a spanning path to ensure all nodes are connected
+        for (let i = 0; i < nodes - 1; i++) {
+            const edge = { from: i, to: i + 1, weight: Math.floor(Math.random() * 20) + 1 };
+            this.graph.edges.push(edge);
+        }
+        
+        // Add some random extra edges
         for (let i = 0; i < nodes; i++) {
-            const numEdges = Math.floor(Math.random() * 3) + 1;
-            for (let j = 0; j < numEdges; j++) {
+            const numExtraEdges = Math.floor(Math.random() * 2);
+            for (let j = 0; j < numExtraEdges; j++) {
                 const target = Math.floor(Math.random() * nodes);
-                if (target !== i) {
-                    const edge = { from: i, to: target, weight: Math.floor(Math.random() * 50) + 1 };
+                if (target !== i && Math.abs(target - i) > 1) {
+                    const edge = { from: i, to: target, weight: Math.floor(Math.random() * 30) + 5 };
                     if (!this.graph.edges.some(e => e.from === edge.from && e.to === edge.to)) {
                         this.graph.edges.push(edge);
                     }
@@ -848,6 +863,19 @@ function computeLPS(pattern) {
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
         }
+        
+        // Clear all DP and visualization data
+        this.fibSequence = null;
+        this.lcsData = null;
+        this.knapsackData = null;
+        this.coinData = null;
+        this.editData = null;
+        this.matrixData = null;
+        this.highlightIndices = [];
+        this.compareIndices = [];
+        this.foundIndex = -1;
+        this.currentNode = -1;
+        this.currentEdge = null;
         
         this.addLog('Simulation reset', 'normal');
         this.initializeAlgorithm();
@@ -2544,6 +2572,16 @@ function computeLPS(pattern) {
             case 'dynamic':
                 if (this.fibSequence) {
                     this.drawFibonacci();
+                } else if (this.lcsData) {
+                    this.drawLCS();
+                } else if (this.knapsackData) {
+                    this.drawKnapsack();
+                } else if (this.coinData) {
+                    this.drawCoinChange();
+                } else if (this.editData) {
+                    this.drawEditDistance();
+                } else if (this.matrixData) {
+                    this.drawMatrixChain();
                 } else {
                     this.drawArray();
                 }
@@ -2630,30 +2668,53 @@ function computeLPS(pattern) {
             this.ctx.fillText(edge.weight.toString(), midX, midY);
         });
         
-        // Draw nodes on top
+        // Draw nodes on top - mark start (node 0) and end (last node)
         this.graph.nodes.forEach(node => {
             this.ctx.beginPath();
             this.ctx.arc(node.x, node.y, 24, 0, 2 * Math.PI);
             
-            if (node.visited) {
-                this.ctx.fillStyle = '#4caf50';
-            } else if (this.currentNode && this.currentNode === node.id) {
-                this.ctx.fillStyle = '#ff5722';
-            } else {
-                this.ctx.fillStyle = '#667eea';
+            let fillColor = '#667eea'; // Default blue
+            
+            // Start node (green)
+            if (node.id === 0) {
+                fillColor = '#4caf50';
+            }
+            // End node (red) - last node
+            else if (node.id === this.graph.nodes.length - 1) {
+                fillColor = '#f44336';
+            }
+            // Currently being processed (orange)
+            else if (this.currentNode === node.id) {
+                fillColor = '#ff5722';
+            }
+            // Visited nodes (green)
+            else if (node.visited) {
+                fillColor = '#4caf50';
             }
             
+            this.ctx.fillStyle = fillColor;
             this.ctx.fill();
             this.ctx.strokeStyle = '#333333';
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
             
-            // Node value with black text for better contrast
+            // Node ID with black text for better contrast
             this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(node.id.toString(), node.x, node.y);
+            
+            // Mark Start and End nodes
+            if (node.id === 0) {
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = 'bold 10px Arial';
+                this.ctx.fillText('S', node.x - 8, node.y - 8);
+            } else if (node.id === this.graph.nodes.length - 1) {
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = 'bold 10px Arial';
+                this.ctx.fillText('E', node.x - 8, node.y - 8);
+            }
         });
     }
 
@@ -2738,6 +2799,341 @@ function computeLPS(pattern) {
             this.ctx.font = '12px Arial';
             this.ctx.fillText(`F(${index})`, x + boxWidth / 2, y + boxHeight + 25);
         });
+    }
+
+    drawLCS() {
+        if (!this.lcsData) return;
+        const { s1, s2, dp, currentI, currentJ } = this.lcsData;
+        const cellSize = 35;
+        const offsetX = 60;
+        const offsetY = 60;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw headers
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('LCS DP Table', this.canvas.width / 2, 25);
+        
+        // Draw s2 (columns)
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '12px Arial';
+        for (let j = 0; j <= s2.length; j++) {
+            const x = offsetX + j * cellSize;
+            this.ctx.fillText(j === 0 ? '' : s2[j - 1], x + cellSize / 2, offsetY - 10);
+        }
+        
+        // Draw s1 (rows) and DP table
+        for (let i = 0; i <= s1.length; i++) {
+            // Row header
+            if (i > 0) {
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = '12px Arial';
+                this.ctx.fillText(s1[i - 1], offsetX - 20, offsetY + i * cellSize + cellSize / 2);
+            }
+            
+            for (let j = 0; j <= s2.length; j++) {
+                const x = offsetX + j * cellSize;
+                const y = offsetY + i * cellSize;
+                
+                // Cell background
+                if (i === currentI && j === currentJ) {
+                    this.ctx.fillStyle = '#ff5722'; // Current cell
+                } else if (i === currentI - 1 || j === currentJ - 1) {
+                    this.ctx.fillStyle = '#ffe0b2'; // Referenced cells
+                } else {
+                    this.ctx.fillStyle = i === 0 || j === 0 ? '#e3f2fd' : '#ffffff';
+                }
+                
+                this.ctx.fillRect(x, y, cellSize, cellSize);
+                this.ctx.strokeStyle = '#bdbdbd';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(x, y, cellSize, cellSize);
+                
+                // Cell value
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(dp[i][j].toString(), x + cellSize / 2, y + cellSize / 2);
+            }
+        }
+        
+        // Legend
+        this.ctx.fillStyle = '#ff5722';
+        this.ctx.fillRect(offsetX, offsetY + (s1.length + 1) * cellSize + 15, 20, 20);
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '11px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText('= Current', offsetX + 25, offsetY + (s1.length + 1) * cellSize + 30);
+    }
+
+    drawKnapsack() {
+        if (!this.knapsackData) return;
+        const { weights, values, capacity, dp, currentI, currentW } = this.knapsackData;
+        const cellSize = 30;
+        const offsetX = 80;
+        const offsetY = 70;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Title
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('0/1 Knapsack DP Table', this.canvas.width / 2, 25);
+        
+        // Draw capacity (columns)
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '10px Arial';
+        for (let w = 0; w <= capacity; w++) {
+            const x = offsetX + w * cellSize;
+            this.ctx.fillText(w.toString(), x + cellSize / 2, offsetY - 10);
+        }
+        
+        // Draw items (rows) and DP table
+        for (let i = 0; i <= weights.length; i++) {
+            // Row header
+            if (i > 0) {
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = '10px Arial';
+                this.ctx.fillText(`Item${i}\n(w:${weights[i-1]},v:${values[i-1]})`, offsetX - 70, offsetY + i * cellSize + cellSize / 2);
+            }
+            
+            for (let w = 0; w <= capacity; w++) {
+                const x = offsetX + w * cellSize;
+                const y = offsetY + i * cellSize;
+                
+                // Cell background
+                if (i === currentI && w === currentW) {
+                    this.ctx.fillStyle = '#ff5722';
+                } else {
+                    this.ctx.fillStyle = i === 0 ? '#e3f2fd' : '#ffffff';
+                }
+                
+                this.ctx.fillRect(x, y, cellSize, cellSize);
+                this.ctx.strokeStyle = '#bdbdbd';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(x, y, cellSize, cellSize);
+                
+                // Cell value
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 10px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(dp[i][w].toString(), x + cellSize / 2, y + cellSize / 2);
+            }
+        }
+    }
+
+    drawCoinChange() {
+        if (!this.coinData) return;
+        const { coins, amount, dp, currentCoin, currentAmt } = this.coinData;
+        const cellSize = 35;
+        const offsetX = 60;
+        const offsetY = 70;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Title
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Coin Change DP', this.canvas.width / 2, 25);
+        
+        // Draw amounts (columns)
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '10px Arial';
+        for (let a = 0; a <= amount; a++) {
+            const x = offsetX + a * cellSize;
+            this.ctx.fillText(a.toString(), x + cellSize / 2, offsetY - 10);
+        }
+        
+        // Draw coins (rows) and DP array
+        coins.forEach((coin, idx) => {
+            const rowY = offsetY + idx * cellSize;
+            
+            // Row header
+            this.ctx.fillStyle = '#000000';
+            this.ctx.font = '11px Arial';
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText(`Coin ${coin}`, offsetX - 10, rowY + cellSize / 2);
+            
+            // DP cells for this coin
+            for (let a = 0; a <= amount; a++) {
+                const x = offsetX + a * cellSize;
+                
+                // Cell background
+                if (currentCoin === coin && currentAmt === a) {
+                    this.ctx.fillStyle = '#ff5722';
+                } else {
+                    this.ctx.fillStyle = '#ffffff';
+                }
+                
+                this.ctx.fillRect(x, rowY, cellSize, cellSize);
+                this.ctx.strokeStyle = '#bdbdbd';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(x, rowY, cellSize, cellSize);
+                
+                // Cell value
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 11px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                if (dp[a] !== Infinity) {
+                    this.ctx.fillText(dp[a].toString(), x + cellSize / 2, rowY + cellSize / 2);
+                } else {
+                    this.ctx.fillText('∞', x + cellSize / 2, rowY + cellSize / 2);
+                }
+            }
+        });
+        
+        // Final result row
+        const finalY = offsetY + coins.length * cellSize;
+        this.ctx.fillStyle = '#4caf50';
+        this.ctx.fillRect(offsetX, finalY, (amount + 1) * cellSize, cellSize);
+        this.ctx.strokeStyle = '#2e7d32';
+        this.ctx.strokeRect(offsetX, finalY, (amount + 1) * cellSize, cellSize);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        const result = dp[amount] !== Infinity ? dp[amount].toString() : 'Impossible';
+        this.ctx.fillText(`Result: ${result}`, offsetX + amount * cellSize / 2, finalY + cellSize / 2);
+    }
+
+    drawEditDistance() {
+        if (!this.editData) return;
+        const { s1, s2, dp, currentI, currentJ } = this.editData;
+        const cellSize = 32;
+        const offsetX = 70;
+        const offsetY = 60;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Title
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Edit Distance (Levenshtein)', this.canvas.width / 2, 25);
+        
+        // Draw s2 (columns)
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '11px Arial';
+        for (let j = 0; j <= s2.length; j++) {
+            const x = offsetX + j * cellSize;
+            this.ctx.fillText(j === 0 ? '' : s2[j - 1], x + cellSize / 2, offsetY - 10);
+        }
+        
+        // Draw s1 (rows) and DP table
+        for (let i = 0; i <= s1.length; i++) {
+            // Row header
+            if (i > 0) {
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = '11px Arial';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(s1[i - 1], offsetX - 15, offsetY + i * cellSize + cellSize / 2);
+            }
+            
+            for (let j = 0; j <= s2.length; j++) {
+                const x = offsetX + j * cellSize;
+                const y = offsetY + i * cellSize;
+                
+                // Cell background
+                if (i === currentI && j === currentJ) {
+                    this.ctx.fillStyle = '#ff5722';
+                } else {
+                    this.ctx.fillStyle = i === 0 || j === 0 ? '#e3f2fd' : '#ffffff';
+                }
+                
+                this.ctx.fillRect(x, y, cellSize, cellSize);
+                this.ctx.strokeStyle = '#bdbdbd';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(x, y, cellSize, cellSize);
+                
+                // Cell value
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 11px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(dp[i][j].toString(), x + cellSize / 2, y + cellSize / 2);
+            }
+        }
+        
+        // Result
+        const finalDist = dp[s1.length][s2.length];
+        this.ctx.fillStyle = '#4caf50';
+        this.ctx.fillRect(offsetX, offsetY + (s1.length + 1) * cellSize + 15, 150, 30);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 13px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(`Distance: ${finalDist}`, offsetX + 75, offsetY + (s1.length + 1) * cellSize + 30);
+    }
+
+    drawMatrixChain() {
+        if (!this.matrixData) return;
+        const { dims, dp, currentLen, currentI, currentJ } = this.matrixData;
+        const n = dims.length - 1;
+        const cellSize = 40;
+        const offsetX = 50;
+        const offsetY = 50;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Title
+        this.ctx.fillStyle = '#1976d2';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Matrix Chain Multiplication', this.canvas.width / 2, 25);
+        
+        // Draw dimensions info
+        this.ctx.fillStyle = '#424242';
+        this.ctx.font = '11px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`Dimensions: [${dims.join('x')}]`, offsetX, offsetY - 20);
+        
+        // Draw upper triangular DP table
+        for (let i = 1; i <= n; i++) {
+            for (let j = i; j <= n; j++) {
+                const x = offsetX + (j - 1) * cellSize;
+                const y = offsetY + (i - 1) * cellSize;
+                
+                // Cell background
+                if (i === currentI && j === currentJ) {
+                    this.ctx.fillStyle = '#ff5722';
+                } else if (j - i + 1 === currentLen) {
+                    this.ctx.fillStyle = '#ffe0b2';
+                } else {
+                    this.ctx.fillStyle = '#ffffff';
+                }
+                
+                this.ctx.fillRect(x, y, cellSize, cellSize);
+                this.ctx.strokeStyle = '#bdbdbd';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(x, y, cellSize, cellSize);
+                
+                // Cell value
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 10px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                if (dp[i][j] !== 0 && dp[i][j] !== Infinity) {
+                    this.ctx.fillText(dp[i][j].toString(), x + cellSize / 2, y + cellSize / 2);
+                }
+            }
+        }
+        
+        // Result
+        const minCost = dp[1][n];
+        this.ctx.fillStyle = '#4caf50';
+        this.ctx.fillRect(offsetX, offsetY + n * cellSize + 20, 200, 35);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 13px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(`Min Cost: ${minCost}`, offsetX + 100, offsetY + n * cellSize + 37);
     }
 
     drawString() {
