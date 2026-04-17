@@ -170,7 +170,8 @@ class AlgorithmSimulator {
     initializeAlgorithm() {
         this.resetStats();
         this.data = [];
-        this.graph = null;
+        // Don't set graph to null here, preserve structure for reset
+        // this.graph = null;
         this.tree = null;
         
         // Clear all DP data structures
@@ -253,6 +254,10 @@ class AlgorithmSimulator {
                 }
             }
         }
+        
+        // Set start and end nodes
+        this.startNode = 0;
+        this.endNode = nodes - 1;
     }
 
     generateTree() {
@@ -862,6 +867,7 @@ function computeLPS(pattern) {
         
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
         }
         
         // Clear all DP and visualization data
@@ -874,8 +880,21 @@ function computeLPS(pattern) {
         this.highlightIndices = [];
         this.compareIndices = [];
         this.foundIndex = -1;
-        this.currentNode = -1;
+        this.currentNode = null;
         this.currentEdge = null;
+        this.path = [];
+        
+        // Reset graph node states if graph exists
+        if (this.graph && this.graph.nodes) {
+            this.graph.nodes.forEach(node => {
+                node.visited = false;
+                node.distance = Infinity;
+                node.previous = null;
+                node.inQueue = false;
+                node.inStack = false;
+                node.finalized = false;
+            });
+        }
         
         this.addLog('Simulation reset', 'normal');
         this.initializeAlgorithm();
@@ -2683,7 +2702,7 @@ function computeLPS(pattern) {
     }
 
     drawGraph() {
-        if (!this.graph) return;
+        if (!this.graph || !this.graph.nodes || !this.graph.edges) return;
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -2777,7 +2796,7 @@ function computeLPS(pattern) {
     }
 
     drawTree() {
-        if (!this.tree) return;
+        if (!this.tree || !this.tree.nodes || !this.tree.edges) return;
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -3195,7 +3214,7 @@ function computeLPS(pattern) {
     }
 
     drawString() {
-        if (!this.data || !this.data.text) return;
+        if (!this.data || !Array.isArray(this.data)) return;
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -3212,7 +3231,8 @@ function computeLPS(pattern) {
         this.ctx.fillText('Text:', startX, textY - 25);
         
         // Draw text characters
-        this.data.text.forEach((char, index) => {
+        if (this.data.text && Array.isArray(this.data.text)) {
+            this.data.text.forEach((char, index) => {
             const x = startX + 70 + index * charWidth;
             
             // Box background
