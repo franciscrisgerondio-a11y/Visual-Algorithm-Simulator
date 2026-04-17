@@ -1317,15 +1317,13 @@ function computeLPS(pattern) {
     drawArray() {
         const barWidth = (this.canvas.width - 40) / this.data.length;
         const maxHeight = this.canvas.height - 60;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+        const showLabels = this.data.length <= 20;
+    
         this.data.forEach((value, index) => {
             const height = (value / 320) * maxHeight;
             const x = 20 + index * barWidth;
             const y = this.canvas.height - 30 - height;
-            
-            // Color based on state
+    
             if (this.foundIndex === index) {
                 this.ctx.fillStyle = '#4caf50';
             } else if (this.highlightIndices && this.highlightIndices.includes(index)) {
@@ -1335,14 +1333,15 @@ function computeLPS(pattern) {
             } else {
                 this.ctx.fillStyle = '#667eea';
             }
-            
-            this.ctx.fillRect(x, y, Math.max(barWidth - 2, 8), height);
-            
-            // Draw value with black text for better contrast on light background
-            this.ctx.fillStyle = '#000000';
-            this.ctx.font = 'bold 11px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(value.toString(), x + Math.max(barWidth - 2, 8) / 2, y - 8);
+    
+            this.ctx.fillRect(x, y, Math.max(barWidth - 2, 4), height);
+    
+            if (showLabels && barWidth >= 18) {
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 11px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(value.toString(), x + Math.max(barWidth - 2, 4) / 2, y - 5);
+            }
         });
     }
 
