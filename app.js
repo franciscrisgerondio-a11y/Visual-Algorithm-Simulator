@@ -1,5 +1,3 @@
-// Visual Algorithm Simulator - Main Application
-
 class AlgorithmSimulator {
     constructor() {
         this.canvas = document.getElementById('algo-canvas');
@@ -12,13 +10,10 @@ class AlgorithmSimulator {
         this.stats = { comparisons: 0, swaps: 0, operations: 0 };
         this.logEntries = [];
         this.maxLogEntries = 100;
-        
-        // Animation timing
         this.lastDrawTime = 0;
-        this.animationDelay = 100; // Base delay in ms
-        
+        this.animationDelay = 100;
+
         this.algorithms = {
-            // Sorting Algorithms
             sorting: [
                 { name: 'Bubble Sort', id: 'bubbleSort' },
                 { name: 'Selection Sort', id: 'selectionSort' },
@@ -29,7 +24,6 @@ class AlgorithmSimulator {
                 { name: 'Counting Sort', id: 'countingSort' },
                 { name: 'Radix Sort', id: 'radixSort' }
             ],
-            // Searching Algorithms
             searching: [
                 { name: 'Linear Search', id: 'linearSearch' },
                 { name: 'Binary Search', id: 'binarySearch' },
@@ -37,7 +31,6 @@ class AlgorithmSimulator {
                 { name: 'Exponential Search', id: 'exponentialSearch' },
                 { name: 'Interpolation Search', id: 'interpolationSearch' }
             ],
-            // Graph Algorithms
             graph: [
                 { name: 'BFS', id: 'bfs' },
                 { name: 'DFS', id: 'dfs' },
@@ -49,7 +42,6 @@ class AlgorithmSimulator {
                 { name: 'Topological Sort', id: 'topologicalSort' },
                 { name: 'A* Search', id: 'astar' }
             ],
-            // Dynamic Programming
             dynamic: [
                 { name: 'Fibonacci', id: 'fibonacci' },
                 { name: 'Longest Common Subsequence', id: 'lcs' },
@@ -58,7 +50,6 @@ class AlgorithmSimulator {
                 { name: 'Coin Change', id: 'coinChange' },
                 { name: 'Edit Distance', id: 'editDistance' }
             ],
-            // Tree Algorithms
             tree: [
                 { name: 'Binary Search Tree', id: 'bst' },
                 { name: 'AVL Tree', id: 'avlTree' },
@@ -67,13 +58,12 @@ class AlgorithmSimulator {
                 { name: 'Heap Operations', id: 'heapOps' },
                 { name: 'Trie', id: 'trie' }
             ],
-            // String Algorithms
             string: [
                 { name: 'Naive Pattern Search', id: 'naiveSearch' },
                 { name: 'KMP Algorithm', id: 'kmp' },
                 { name: 'Rabin-Karp', id: 'rabinKarp' },
                 { name: 'Z Algorithm', id: 'zAlgorithm' },
-                { name: 'Manacher\'s Algorithm', id: 'manacher' }
+                { name: "Manacher's Algorithm", id: 'manacher' }
             ]
         };
 
@@ -82,7 +72,7 @@ class AlgorithmSimulator {
         this.targetIndex = -1;
         this.graph = null;
         this.tree = null;
-        
+
         this.init();
     }
 
@@ -97,18 +87,15 @@ class AlgorithmSimulator {
         const container = document.getElementById('canvas-container');
         this.canvas.width = container.clientWidth - 48;
         this.canvas.height = 450;
-        
+
         window.addEventListener('resize', () => {
             this.canvas.width = container.clientWidth - 48;
             this.canvas.height = 450;
-            if (this.currentAlgorithm) {
-                this.draw();
-            }
+            if (this.currentAlgorithm) this.draw();
         });
     }
 
     setupEventListeners() {
-        // Category navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -117,12 +104,10 @@ class AlgorithmSimulator {
             });
         });
 
-        // Control buttons
         document.getElementById('start-btn').addEventListener('click', () => this.start());
         document.getElementById('pause-btn').addEventListener('click', () => this.pause());
         document.getElementById('reset-btn').addEventListener('click', () => this.reset());
-        
-        // Speed slider
+
         document.getElementById('speed-slider').addEventListener('input', (e) => {
             this.speed = parseInt(e.target.value);
         });
@@ -131,7 +116,7 @@ class AlgorithmSimulator {
     loadCategory(category) {
         const container = document.getElementById('algorithm-buttons');
         container.innerHTML = '';
-        
+
         this.algorithms[category].forEach(algo => {
             const btn = document.createElement('button');
             btn.className = 'algo-btn';
@@ -143,46 +128,47 @@ class AlgorithmSimulator {
     }
 
     selectAlgorithm(algoId, algoName, category) {
-        // CRITICAL FIX: Stop any running simulation immediately
         this.isRunning = false;
         this.isPaused = false;
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
         }
-        
+
         document.querySelectorAll('.algo-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`[data-id="${algoId}"]`).classList.add('active');
-        
+
         this.currentAlgorithm = algoId;
         this.algorithmName = algoName;
         this.algorithmCategory = category;
-        
-        // Show warning for incomplete algorithms
-        showWarningForIncomplete(algoId);
-        
-        this.reset();
+
+        // Reset button state
+        document.getElementById('start-btn').disabled = false;
+        document.getElementById('pause-btn').textContent = '⏸ Pause';
+
+        this.resetStats();
         this.initializeAlgorithm();
         this.updateDescription();
         this.updateCode();
     }
 
     initializeAlgorithm() {
-        this.resetStats();
         this.data = [];
-        // Don't set graph to null here, preserve structure for reset
-        // this.graph = null;
         this.tree = null;
-        
-        // Clear all DP data structures
         this.fibSequence = null;
         this.lcsData = null;
         this.knapsackData = null;
         this.coinData = null;
         this.editData = null;
         this.matrixData = null;
-        
-        switch(this.algorithmCategory) {
+        this.highlightIndices = [];
+        this.compareIndices = [];
+        this.foundIndex = -1;
+        this.currentNode = null;
+        this.currentEdge = null;
+        this.path = [];
+
+        switch (this.algorithmCategory) {
             case 'sorting':
             case 'searching':
                 this.generateArray();
@@ -194,11 +180,13 @@ class AlgorithmSimulator {
                 this.generateTree();
                 break;
             case 'dynamic':
+                // DP algorithms initialize their own data during visualization; start with empty canvas
+                break;
             case 'string':
                 this.generateStringData();
                 break;
         }
-        
+
         this.draw();
     }
 
@@ -212,16 +200,12 @@ class AlgorithmSimulator {
 
     generateGraph() {
         const nodes = 8;
-        this.graph = {
-            nodes: [],
-            edges: []
-        };
-        
-        // Create nodes in a circular layout
+        this.graph = { nodes: [], edges: [] };
+
         const centerX = this.canvas.width / 2;
         const centerY = this.canvas.height / 2;
-        const radius = Math.min(centerX, centerY) - 50;
-        
+        const radius = Math.min(centerX, centerY) - 60;
+
         for (let i = 0; i < nodes; i++) {
             const angle = (i * 2 * Math.PI) / nodes - Math.PI / 2;
             this.graph.nodes.push({
@@ -233,18 +217,16 @@ class AlgorithmSimulator {
                 distance: Infinity
             });
         }
-        
-        // Create random edges with guaranteed connectivity
-        // First create a spanning path to ensure all nodes are connected
+
+        // Spanning path for connectivity
         for (let i = 0; i < nodes - 1; i++) {
-            const edge = { from: i, to: i + 1, weight: Math.floor(Math.random() * 20) + 1 };
-            this.graph.edges.push(edge);
+            this.graph.edges.push({ from: i, to: i + 1, weight: Math.floor(Math.random() * 20) + 1 });
         }
-        
-        // Add some random extra edges
+
+        // Extra random edges
         for (let i = 0; i < nodes; i++) {
-            const numExtraEdges = Math.floor(Math.random() * 2);
-            for (let j = 0; j < numExtraEdges; j++) {
+            const numExtra = Math.floor(Math.random() * 2);
+            for (let j = 0; j < numExtra; j++) {
                 const target = Math.floor(Math.random() * nodes);
                 if (target !== i && Math.abs(target - i) > 1) {
                     const edge = { from: i, to: target, weight: Math.floor(Math.random() * 30) + 5 };
@@ -254,48 +236,38 @@ class AlgorithmSimulator {
                 }
             }
         }
-        
-        // Set start and end nodes
+
         this.startNode = 0;
         this.endNode = nodes - 1;
     }
 
     generateTree() {
-        this.tree = {
-            nodes: [],
-            edges: []
-        };
-        
-        // Create a simple binary tree
+        this.tree = { nodes: [], edges: [] };
         const levels = 3;
-        const nodeCount = Math.pow(2, levels) - 1;
         const centerX = this.canvas.width / 2;
         const levelHeight = this.canvas.height / (levels + 1);
-        
+
         let nodeId = 0;
         for (let level = 0; level < levels; level++) {
             const nodesInLevel = Math.pow(2, level);
             const spacing = this.canvas.width / (nodesInLevel + 1);
-            
+
             for (let i = 0; i < nodesInLevel; i++) {
                 const x = spacing * (i + 1);
                 const y = levelHeight * (level + 1);
-                
+
                 this.tree.nodes.push({
                     id: nodeId,
-                    x: x,
-                    y: y,
+                    x, y,
                     value: Math.floor(Math.random() * 100),
                     visited: false,
-                    level: level
+                    level
                 });
-                
-                // Add edge to parent
+
                 if (level > 0) {
                     const parentId = Math.floor((nodeId - 1) / 2);
                     this.tree.edges.push({ from: parentId, to: nodeId });
                 }
-                
                 nodeId++;
             }
         }
@@ -341,7 +313,7 @@ class AlgorithmSimulator {
             prim: "Prim's Algorithm builds the Minimum Spanning Tree by growing from a starting vertex.",
             topologicalSort: "Topological Sort orders vertices in a directed acyclic graph such that for every edge u→v, u comes before v.",
             astar: "A* Search finds the shortest path using heuristics to guide the search towards the goal.",
-            fibonacci: "Fibonacci sequence where each number is the sum of the two preceding ones.",
+            fibonacci: "Fibonacci sequence where each number is the sum of the two preceding ones, visualized as a growing DP table.",
             lcs: "Longest Common Subsequence finds the longest subsequence present in both sequences.",
             knapsack: "Knapsack Problem maximizes value of items that can be carried in a knapsack with weight capacity.",
             matrixChain: "Matrix Chain Multiplication finds the optimal way to multiply a chain of matrices.",
@@ -359,7 +331,7 @@ class AlgorithmSimulator {
             zAlgorithm: "Z Algorithm finds all occurrences of a pattern in a text using Z-values.",
             manacher: "Manacher's Algorithm finds the longest palindromic substring in linear time."
         };
-        
+
         document.getElementById('description').innerHTML = `
             <h3>${this.algorithmName}</h3>
             <p>${descriptions[this.currentAlgorithm] || 'Select an algorithm to see its description.'}</p>
@@ -383,8 +355,7 @@ class AlgorithmSimulator {
             bst: "O(log n) average, O(n) worst", avlTree: "O(log n)",
             redBlackTree: "O(log n)", treeTraversals: "O(n)", heapOps: "O(log n)",
             trie: "O(m)", naiveSearch: "O(m·n)", kmp: "O(m + n)",
-            rabinKarp: "O(m + n) average", zAlgorithm: "O(m + n)",
-            manacher: "O(n)"
+            rabinKarp: "O(m + n) average", zAlgorithm: "O(m + n)", manacher: "O(n)"
         };
         return complexities[this.currentAlgorithm] || "N/A";
     }
@@ -414,14 +385,14 @@ class AlgorithmSimulator {
             bubbleSort: `function bubbleSort(arr) {
     let n = arr.length;
     for (let i = 0; i < n - 1; i++) {
+        let swapped = false;
         for (let j = 0; j < n - i - 1; j++) {
             if (arr[j] > arr[j + 1]) {
-                // Swap
-                let temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
+                [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                swapped = true;
             }
         }
+        if (!swapped) break; // Early termination
     }
     return arr;
 }`,
@@ -430,22 +401,17 @@ class AlgorithmSimulator {
     for (let i = 0; i < n - 1; i++) {
         let minIdx = i;
         for (let j = i + 1; j < n; j++) {
-            if (arr[j] < arr[minIdx]) {
-                minIdx = j;
-            }
+            if (arr[j] < arr[minIdx]) minIdx = j;
         }
-        // Swap
-        let temp = arr[i];
-        arr[i] = arr[minIdx];
-        arr[minIdx] = temp;
+        if (minIdx !== i) {
+            [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+        }
     }
     return arr;
 }`,
             insertionSort: `function insertionSort(arr) {
-    let n = arr.length;
-    for (let i = 1; i < n; i++) {
-        let key = arr[i];
-        let j = i - 1;
+    for (let i = 1; i < arr.length; i++) {
+        let key = arr[i], j = i - 1;
         while (j >= 0 && arr[j] > key) {
             arr[j + 1] = arr[j];
             j--;
@@ -456,78 +422,45 @@ class AlgorithmSimulator {
 }`,
             mergeSort: `function mergeSort(arr) {
     if (arr.length <= 1) return arr;
-    
     let mid = Math.floor(arr.length / 2);
-    let left = mergeSort(arr.slice(0, mid));
-    let right = mergeSort(arr.slice(mid));
-    
-    return merge(left, right);
+    return merge(mergeSort(arr.slice(0, mid)), mergeSort(arr.slice(mid)));
 }
-
 function merge(left, right) {
-    let result = [];
-    let i = 0, j = 0;
-    
+    let result = [], i = 0, j = 0;
     while (i < left.length && j < right.length) {
-        if (left[i] <= right[j]) {
-            result.push(left[i++]);
-        } else {
-            result.push(right[j++]);
-        }
+        result.push(left[i] <= right[j] ? left[i++] : right[j++]);
     }
-    
     return result.concat(left.slice(i)).concat(right.slice(j));
 }`,
-            quickSort: `function quickSort(arr, low = 0, high = arr.length - 1) {
-    if (low < high) {
-        let pi = partition(arr, low, high);
-        quickSort(arr, low, pi - 1);
-        quickSort(arr, pi + 1, high);
+            quickSort: `function quickSort(arr, lo = 0, hi = arr.length - 1) {
+    if (lo < hi) {
+        let pi = partition(arr, lo, hi);
+        quickSort(arr, lo, pi - 1);
+        quickSort(arr, pi + 1, hi);
     }
     return arr;
 }
-
-function partition(arr, low, high) {
-    let pivot = arr[high];
-    let i = low - 1;
-    
-    for (let j = low; j < high; j++) {
-        if (arr[j] < pivot) {
-            i++;
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
+function partition(arr, lo, hi) {
+    let pivot = arr[hi], i = lo - 1;
+    for (let j = lo; j < hi; j++) {
+        if (arr[j] < pivot) [arr[++i], arr[j]] = [arr[j], arr[i]];
     }
-    [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+    [arr[i + 1], arr[hi]] = [arr[hi], arr[i + 1]];
     return i + 1;
 }`,
             heapSort: `function heapSort(arr) {
     let n = arr.length;
-    
-    // Build max heap
-    for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
-        heapify(arr, n, i);
-    }
-    
-    // Extract elements
+    for (let i = Math.floor(n / 2) - 1; i >= 0; i--) heapify(arr, n, i);
     for (let i = n - 1; i > 0; i--) {
         [arr[0], arr[i]] = [arr[i], arr[0]];
         heapify(arr, i, 0);
     }
     return arr;
 }
-
 function heapify(arr, n, i) {
-    let largest = i;
-    let left = 2 * i + 1;
-    let right = 2 * i + 2;
-    
-    if (left < n && arr[left] > arr[largest]) {
-        largest = left;
-    }
-    if (right < n && arr[right] > arr[largest]) {
-        largest = right;
-    }
-    
+    let largest = i, l = 2*i+1, r = 2*i+2;
+    if (l < n && arr[l] > arr[largest]) largest = l;
+    if (r < n && arr[r] > arr[largest]) largest = r;
     if (largest !== i) {
         [arr[i], arr[largest]] = [arr[largest], arr[i]];
         heapify(arr, n, largest);
@@ -536,93 +469,52 @@ function heapify(arr, n, i) {
             countingSort: `function countingSort(arr) {
     let max = Math.max(...arr);
     let count = new Array(max + 1).fill(0);
-    
-    // Count occurrences
-    for (let num of arr) {
-        count[num]++;
-    }
-    
-    // Reconstruct array
+    for (let n of arr) count[n]++;
     let idx = 0;
     for (let i = 0; i <= max; i++) {
-        while (count[i] > 0) {
-            arr[idx++] = i;
-            count[i]--;
-        }
+        while (count[i]-- > 0) arr[idx++] = i;
     }
     return arr;
 }`,
             radixSort: `function radixSort(arr) {
     let max = Math.max(...arr);
-    let exp = 1;
-    
-    while (Math.floor(max / exp) > 0) {
-        countingSortByDigit(arr, exp);
-        exp *= 10;
+    for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
+        countByDigit(arr, exp);
     }
     return arr;
 }
-
-function countingSortByDigit(arr, exp) {
-    let n = arr.length;
-    let output = new Array(n);
-    let count = new Array(10).fill(0);
-    
-    for (let i = 0; i < n; i++) {
-        let digit = Math.floor(arr[i] / exp) % 10;
-        count[digit]++;
-    }
-    
-    for (let i = 1; i < 10; i++) {
-        count[i] += count[i - 1];
-    }
-    
+function countByDigit(arr, exp) {
+    let n = arr.length, output = new Array(n), count = new Array(10).fill(0);
+    for (let i = 0; i < n; i++) count[Math.floor(arr[i] / exp) % 10]++;
+    for (let i = 1; i < 10; i++) count[i] += count[i - 1];
     for (let i = n - 1; i >= 0; i--) {
-        let digit = Math.floor(arr[i] / exp) % 10;
-        output[count[digit] - 1] = arr[i];
-        count[digit]--;
+        let d = Math.floor(arr[i] / exp) % 10;
+        output[--count[d]] = arr[i];
     }
-    
-    for (let i = 0; i < n; i++) {
-        arr[i] = output[i];
-    }
+    for (let i = 0; i < n; i++) arr[i] = output[i];
 }`,
             linearSearch: `function linearSearch(arr, target) {
     for (let i = 0; i < arr.length; i++) {
-        if (arr[i] === target) {
-            return i;
-        }
+        if (arr[i] === target) return i;
     }
     return -1;
 }`,
             binarySearch: `function binarySearch(arr, target) {
-    let left = 0;
-    let right = arr.length - 1;
-    
+    let left = 0, right = arr.length - 1;
     while (left <= right) {
-        let mid = Math.floor((left + right) / 2);
-        
-        if (arr[mid] === target) {
-            return mid;
-        } else if (arr[mid] < target) {
-            left = mid + 1;
-        } else {
-            right = mid - 1;
-        }
+        let mid = (left + right) >> 1;
+        if (arr[mid] === target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
     }
     return -1;
 }`,
             bfs: `function BFS(graph, start) {
-    let visited = new Set();
-    let queue = [start];
-    let result = [];
-    
-    visited.add(start);
-    
+    let visited = new Set([start]);
+    let queue = [start], result = [];
     while (queue.length > 0) {
         let node = queue.shift();
         result.push(node);
-        
         for (let neighbor of graph[node]) {
             if (!visited.has(neighbor)) {
                 visited.add(neighbor);
@@ -635,130 +527,72 @@ function countingSortByDigit(arr, exp) {
             dfs: `function DFS(graph, node, visited = new Set(), result = []) {
     visited.add(node);
     result.push(node);
-    
     for (let neighbor of graph[node]) {
-        if (!visited.has(neighbor)) {
-            DFS(graph, neighbor, visited, result);
-        }
+        if (!visited.has(neighbor)) DFS(graph, neighbor, visited, result);
     }
     return result;
 }`,
             dijkstra: `function dijkstra(graph, start) {
-    let distances = {};
-    let previous = {};
-    let pq = new PriorityQueue();
-    
-    for (let node in graph) {
-        distances[node] = Infinity;
-        previous[node] = null;
-    }
-    distances[start] = 0;
-    pq.enqueue(start, 0);
-    
-    while (!pq.isEmpty()) {
-        let current = pq.dequeue().value;
-        
-        for (let neighbor in graph[current]) {
-            let alt = distances[current] + graph[current][neighbor];
-            if (alt < distances[neighbor]) {
-                distances[neighbor] = alt;
-                previous[neighbor] = current;
-                pq.enqueue(neighbor, alt);
+    let dist = {}, prev = {}, pq = [[0, start]];
+    for (let n in graph) dist[n] = Infinity;
+    dist[start] = 0;
+    while (pq.length) {
+        let [d, u] = pq.shift();
+        if (d > dist[u]) continue;
+        for (let [v, w] of graph[u]) {
+            if (dist[u] + w < dist[v]) {
+                dist[v] = dist[u] + w;
+                prev[v] = u;
+                pq.push([dist[v], v]);
+                pq.sort((a,b) => a[0]-b[0]);
             }
         }
     }
-    return { distances, previous };
+    return { dist, prev };
 }`,
             fibonacci: `function fibonacci(n) {
-    if (n <= 1) return n;
-    
     let dp = [0, 1];
-    for (let i = 2; i <= n; i++) {
-        dp[i] = dp[i - 1] + dp[i - 2];
-    }
+    for (let i = 2; i <= n; i++) dp[i] = dp[i-1] + dp[i-2];
     return dp[n];
 }`,
-            lcs: `function LCS(text1, text2) {
-    let m = text1.length;
-    let n = text2.length;
-    let dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-    
-    for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-            if (text1[i - 1] === text2[j - 1]) {
-                dp[i][j] = dp[i - 1][j - 1] + 1;
-            } else {
-                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-            }
-        }
-    }
+            lcs: `function LCS(s1, s2) {
+    let m = s1.length, n = s2.length;
+    let dp = Array.from({length: m+1}, () => Array(n+1).fill(0));
+    for (let i = 1; i <= m; i++)
+        for (let j = 1; j <= n; j++)
+            dp[i][j] = s1[i-1]===s2[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
     return dp[m][n];
 }`,
-            knapsack: `function knapsack(weights, values, capacity) {
-    let n = weights.length;
-    let dp = Array(n + 1).fill(null).map(() => Array(capacity + 1).fill(0));
-    
-    for (let i = 1; i <= n; i++) {
-        for (let w = 0; w <= capacity; w++) {
-            if (weights[i - 1] <= w) {
-                dp[i][w] = Math.max(
-                    dp[i - 1][w],
-                    dp[i - 1][w - weights[i - 1]] + values[i - 1]
-                );
-            } else {
-                dp[i][w] = dp[i - 1][w];
-            }
-        }
-    }
-    return dp[n][capacity];
+            knapsack: `function knapsack(w, v, cap) {
+    let n = w.length;
+    let dp = Array.from({length: n+1}, () => Array(cap+1).fill(0));
+    for (let i = 1; i <= n; i++)
+        for (let c = 0; c <= cap; c++)
+            dp[i][c] = w[i-1] <= c
+                ? Math.max(dp[i-1][c], v[i-1] + dp[i-1][c-w[i-1]])
+                : dp[i-1][c];
+    return dp[n][cap];
 }`,
             kmp: `function KMP(text, pattern) {
-    let lps = computeLPS(pattern);
-    let i = 0, j = 0;
-    let matches = [];
-    
-    while (i < text.length) {
-        if (pattern[j] === text[i]) {
-            i++;
-            j++;
-        }
-        
-        if (j === pattern.length) {
-            matches.push(i - j);
-            j = lps[j - 1];
-        } else if (i < text.length && pattern[j] !== text[i]) {
-            if (j !== 0) {
-                j = lps[j - 1];
-            } else {
-                i++;
-            }
-        }
+    let lps = computeLPS(pattern), matches = [], j = 0;
+    for (let i = 0; i < text.length; i++) {
+        while (j > 0 && text[i] !== pattern[j]) j = lps[j-1];
+        if (text[i] === pattern[j]) j++;
+        if (j === pattern.length) { matches.push(i-j+1); j = lps[j-1]; }
     }
     return matches;
 }
-
-function computeLPS(pattern) {
-    let lps = new Array(pattern.length).fill(0);
-    let len = 0, i = 1;
-    
-    while (i < pattern.length) {
-        if (pattern[i] === pattern[len]) {
-            len++;
-            lps[i] = len;
-            i++;
-        } else {
-            if (len !== 0) {
-                len = lps[len - 1];
-            } else {
-                lps[i] = 0;
-                i++;
-            }
-        }
+function computeLPS(p) {
+    let lps = [0], len = 0, i = 1;
+    while (i < p.length) {
+        if (p[i] === p[len]) { lps[i++] = ++len; }
+        else if (len) { len = lps[len-1]; }
+        else { lps[i++] = 0; }
     }
     return lps;
 }`
         };
-        
+
         document.getElementById('algorithm-code').textContent = codes[this.currentAlgorithm] || '// Code will be displayed here';
     }
 
@@ -770,56 +604,42 @@ function computeLPS(pattern) {
     }
 
     updateStatsDisplay() {
-        let statsText = '';
-        if (this.stats.comparisons > 0) statsText += `Comparisons: ${this.stats.comparisons} | `;
-        if (this.stats.swaps > 0) statsText += `Swaps: ${this.stats.swaps} | `;
-        if (this.stats.operations > 0) statsText += `Operations: ${this.stats.operations}`;
-        document.getElementById('stats').textContent = statsText || 'Ready';
+        let parts = [];
+        if (this.stats.comparisons > 0) parts.push(`Comparisons: ${this.stats.comparisons}`);
+        if (this.stats.swaps > 0) parts.push(`Swaps: ${this.stats.swaps}`);
+        if (this.stats.operations > 0) parts.push(`Operations: ${this.stats.operations}`);
+        document.getElementById('stats').textContent = parts.join(' | ') || 'Ready';
     }
 
-    // Logging functionality
     addLog(message, type = 'normal') {
         const timestamp = new Date().toLocaleTimeString();
-        const logEntry = {
-            message: message,
-            type: type,
-            timestamp: timestamp
-        };
-        
-        this.logEntries.push(logEntry);
-        
-        // Keep only last maxLogEntries
-        if (this.logEntries.length > this.maxLogEntries) {
-            this.logEntries.shift();
-        }
-        
+        this.logEntries.push({ message, type, timestamp });
+        if (this.logEntries.length > this.maxLogEntries) this.logEntries.shift();
         this.updateLogDisplay();
     }
 
     updateLogDisplay() {
         const logContainer = document.getElementById('simulation-log');
         if (!logContainer) return;
-        
-        logContainer.innerHTML = this.logEntries.map(entry => {
-            const className = `log-entry ${entry.type}`;
-            return `<div class="${className}">[${entry.timestamp}] ${entry.message}</div>`;
-        }).join('');
-        
-        // Auto-scroll to bottom
+        logContainer.innerHTML = this.logEntries.map(entry =>
+            `<div class="log-entry ${entry.type}">[${entry.timestamp}] ${entry.message}</div>`
+        ).join('');
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
     clearLog() {
         const logContainer = document.getElementById('simulation-log');
-        if (logContainer) {
-            logContainer.innerHTML = '';
-        }
+        if (logContainer) logContainer.innerHTML = '';
     }
 
-    async waitForResume() {
-        while (this.isPaused && this.isRunning) {
-            await this.sleep(100);
-        }
+    waitForResume() {
+        return new Promise(resolve => {
+            const check = () => {
+                if (!this.isPaused) resolve();
+                else setTimeout(check, 100);
+            };
+            check();
+        });
     }
 
     async start() {
@@ -827,23 +647,24 @@ function computeLPS(pattern) {
             alert('Please select an algorithm first!');
             return;
         }
-        
         if (this.isRunning && !this.isPaused) return;
-        
+
         this.isRunning = true;
         this.isPaused = false;
         document.getElementById('start-btn').disabled = true;
-        
+
         this.addLog(`Starting ${this.algorithmName} simulation...`, 'highlight');
-        
+
         try {
             await this.runAlgorithm();
-            this.addLog('Simulation completed successfully!', 'success');
+            if (this.isRunning) this.addLog('Simulation completed!', 'success');
         } catch (error) {
-            console.error('Algorithm error:', error);
-            this.addLog(`Error: ${error.message}`, 'error');
+            if (this.isRunning) {
+                console.error('Algorithm error:', error);
+                this.addLog(`Error: ${error.message}`, 'error');
+            }
         }
-        
+
         this.isRunning = false;
         document.getElementById('start-btn').disabled = false;
     }
@@ -851,12 +672,7 @@ function computeLPS(pattern) {
     pause() {
         this.isPaused = !this.isPaused;
         document.getElementById('pause-btn').textContent = this.isPaused ? '▶ Resume' : '⏸ Pause';
-        
-        if (this.isPaused) {
-            this.addLog('Simulation paused', 'highlight');
-        } else {
-            this.addLog('Simulation resumed', 'normal');
-        }
+        this.addLog(this.isPaused ? 'Simulation paused' : 'Simulation resumed', 'highlight');
     }
 
     reset() {
@@ -864,13 +680,12 @@ function computeLPS(pattern) {
         this.isPaused = false;
         document.getElementById('pause-btn').textContent = '⏸ Pause';
         document.getElementById('start-btn').disabled = false;
-        
+
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
         }
-        
-        // Clear all DP and visualization data
+
         this.fibSequence = null;
         this.lcsData = null;
         this.knapsackData = null;
@@ -883,8 +698,7 @@ function computeLPS(pattern) {
         this.currentNode = null;
         this.currentEdge = null;
         this.path = [];
-        
-        // Reset graph node states if graph exists
+
         if (this.graph && this.graph.nodes) {
             this.graph.nodes.forEach(node => {
                 node.visited = false;
@@ -895,134 +709,55 @@ function computeLPS(pattern) {
                 node.finalized = false;
             });
         }
-        
+
         this.addLog('Simulation reset', 'normal');
-        this.initializeAlgorithm();
+
+        if (this.currentAlgorithm) {
+            this.initializeAlgorithm();
+        }
     }
 
     async runAlgorithm() {
-        switch(this.currentAlgorithm) {
-            case 'bubbleSort':
-                await this.bubbleSort();
-                break;
-            case 'selectionSort':
-                await this.selectionSort();
-                break;
-            case 'insertionSort':
-                await this.insertionSort();
-                break;
-            case 'mergeSort':
-                await this.mergeSort(0, this.data.length - 1);
-                break;
-            case 'quickSort':
-                await this.quickSort(0, this.data.length - 1);
-                break;
-            case 'heapSort':
-                await this.heapSort();
-                break;
-            case 'countingSort':
-                await this.countingSort();
-                break;
-            case 'radixSort':
-                await this.radixSort();
-                break;
-            case 'linearSearch':
-                await this.linearSearch();
-                break;
-            case 'binarySearch':
-                await this.binarySearch();
-                break;
-            case 'jumpSearch':
-                await this.jumpSearch();
-                break;
-            case 'exponentialSearch':
-                await this.exponentialSearch();
-                break;
-            case 'interpolationSearch':
-                await this.interpolationSearch();
-                break;
-            case 'bfs':
-                await this.runBFS();
-                break;
-            case 'dfs':
-                await this.runDFS();
-                break;
-            case 'dijkstra':
-                await this.runDijkstra();
-                break;
-            case 'bellmanFord':
-                await this.runBellmanFord();
-                break;
-            case 'floydWarshall':
-                await this.runFloydWarshall();
-                break;
-            case 'kruskal':
-                await this.runKruskal();
-                break;
-            case 'prim':
-                await this.runPrim();
-                break;
-            case 'topologicalSort':
-                await this.runTopologicalSort();
-                break;
-            case 'astar':
-                await this.runAStar();
-                break;
-            case 'fibonacci':
-                await this.visualizeFibonacci();
-                break;
-            case 'lcs':
-                await this.visualizeLCS();
-                break;
-            case 'knapsack':
-                await this.visualizeKnapsack();
-                break;
-            case 'coinChange':
-                await this.visualizeCoinChange();
-                break;
-            case 'editDistance':
-                await this.visualizeEditDistance();
-                break;
-            case 'matrixChain':
-                await this.visualizeMatrixChain();
-                break;
-            case 'bst':
-                await this.visualizeBST();
-                break;
-            case 'avlTree':
-                await this.visualizeAVL();
-                break;
-            case 'redBlackTree':
-                await this.visualizeRedBlack();
-                break;
-            case 'treeTraversals':
-                await this.visualizeTreeTraversals();
-                break;
-            case 'heapOps':
-                await this.visualizeHeapOps();
-                break;
-            case 'trie':
-                await this.visualizeTrie();
-                break;
-            case 'naiveSearch':
-                await this.naiveSearch();
-                break;
-            case 'kmp':
-                await this.kmpSearch();
-                break;
-            case 'rabinKarp':
-                await this.rabinKarpSearch();
-                break;
-            case 'zAlgorithm':
-                await this.zAlgorithmSearch();
-                break;
-            case 'manacher':
-                await this.manacherSearch();
-                break;
-            default:
-                this.draw();
-                await this.sleep(1000);
-                alert('Visualization for this algorithm is coming soon!');
+        switch (this.currentAlgorithm) {
+            case 'bubbleSort': await this.bubbleSort(); break;
+            case 'selectionSort': await this.selectionSort(); break;
+            case 'insertionSort': await this.insertionSort(); break;
+            case 'mergeSort': await this.mergeSort(0, this.data.length - 1); break;
+            case 'quickSort': await this.quickSort(0, this.data.length - 1); break;
+            case 'heapSort': await this.heapSort(); break;
+            case 'countingSort': await this.countingSort(); break;
+            case 'radixSort': await this.radixSort(); break;
+            case 'linearSearch': await this.linearSearch(); break;
+            case 'binarySearch': await this.binarySearch(); break;
+            case 'jumpSearch': await this.jumpSearch(); break;
+            case 'exponentialSearch': await this.exponentialSearch(); break;
+            case 'interpolationSearch': await this.interpolationSearch(); break;
+            case 'bfs': await this.runBFS(); break;
+            case 'dfs': await this.runDFS(); break;
+            case 'dijkstra': await this.runDijkstra(); break;
+            case 'bellmanFord': await this.runBellmanFord(); break;
+            case 'floydWarshall': await this.runFloydWarshall(); break;
+            case 'kruskal': await this.runKruskal(); break;
+            case 'prim': await this.runPrim(); break;
+            case 'topologicalSort': await this.runTopologicalSort(); break;
+            case 'astar': await this.runAStar(); break;
+            case 'fibonacci': await this.visualizeFibonacci(); break;
+            case 'lcs': await this.visualizeLCS(); break;
+            case 'knapsack': await this.visualizeKnapsack(); break;
+            case 'coinChange': await this.visualizeCoinChange(); break;
+            case 'editDistance': await this.visualizeEditDistance(); break;
+            case 'matrixChain': await this.visualizeMatrixChain(); break;
+            case 'bst': await this.visualizeBST(); break;
+            case 'avlTree': await this.visualizeAVL(); break;
+            case 'redBlackTree': await this.visualizeRedBlack(); break;
+            case 'treeTraversals': await this.visualizeTreeTraversals(); break;
+            case 'heapOps': await this.visualizeHeapOps(); break;
+            case 'trie': await this.visualizeTrie(); break;
+            case 'naiveSearch': await this.naiveSearch(); break;
+            case 'kmp': await this.kmpSearch(); break;
+            case 'rabinKarp': await this.rabinKarpSearch(); break;
+            case 'zAlgorithm': await this.zAlgorithmSearch(); break;
+            case 'manacher': await this.manacherSearch(); break;
         }
     }
 
@@ -1030,206 +765,143 @@ function computeLPS(pattern) {
         return new Promise(resolve => setTimeout(resolve, ms * (101 - this.speed) / 10));
     }
 
-    // Sorting Algorithm Implementations
+    // ─── Sorting ──────────────────────────────────────────────────────────────
+
     async bubbleSort() {
-        let n = this.data.length;
-        this.addLog(`Starting Bubble Sort on array of ${n} elements`, 'normal');
-        
+        const n = this.data.length;
+        this.addLog(`Bubble Sort on ${n} elements`, 'normal');
+
         for (let i = 0; i < n - 1; i++) {
             let swapped = false;
-            this.addLog(`Pass ${i + 1}: Starting iteration`, 'normal');
-            
             for (let j = 0; j < n - i - 1; j++) {
+                if (!this.isRunning) return;
                 if (this.isPaused) await this.waitForResume();
-                
                 this.stats.comparisons++;
                 this.highlightIndices = [j, j + 1];
                 this.draw();
-                
                 if (this.data[j] > this.data[j + 1]) {
                     this.stats.swaps++;
-                    this.addLog(`Comparing indices ${j} and ${j+1}: ${this.data[j]} > ${this.data[j+1]}, swapping!`, 'normal');
+                    this.addLog(`Swap: ${this.data[j]} ↔ ${this.data[j + 1]}`, 'normal');
                     [this.data[j], this.data[j + 1]] = [this.data[j + 1], this.data[j]];
-                    this.draw();
-                    await this.sleep(50);
                     swapped = true;
-                } else {
-                    this.addLog(`Comparing indices ${j} and ${j+1}: ${this.data[j]} ≤ ${this.data[j+1]}, no swap`, 'normal');
-                    await this.sleep(30);
+                    this.draw();
                 }
+                await this.sleep(50);
             }
-            
-            if (!swapped) {
-                this.addLog('Array is already sorted, early termination', 'success');
-                break;
-            }
+            this.updateStatsDisplay();
+            if (!swapped) { this.addLog('Early termination — sorted!', 'success'); break; }
         }
-        
         this.highlightIndices = [];
         this.draw();
-        this.addLog('Bubble Sort completed!', 'success');
+        this.addLog('Bubble Sort done!', 'success');
     }
 
     async selectionSort() {
-        let n = this.data.length;
-        this.addLog(`Starting Selection Sort on array of ${n} elements`, 'normal');
-        
+        const n = this.data.length;
+        this.addLog(`Selection Sort on ${n} elements`, 'normal');
         for (let i = 0; i < n - 1; i++) {
             let minIdx = i;
-            this.addLog(`Finding minimum element from index ${i} to ${n-1}`, 'normal');
-            
             for (let j = i + 1; j < n; j++) {
+                if (!this.isRunning) return;
                 if (this.isPaused) await this.waitForResume();
-                
                 this.stats.comparisons++;
                 this.highlightIndices = [minIdx, j];
                 this.draw();
-                
-                if (this.data[j] < this.data[minIdx]) {
-                    this.addLog(`Found new minimum: ${this.data[j]} at index ${j} (was ${this.data[minIdx]} at ${minIdx})`, 'highlight');
-                    minIdx = j;
-                }
-                
+                if (this.data[j] < this.data[minIdx]) { minIdx = j; this.addLog(`New min: ${this.data[minIdx]} at ${minIdx}`, 'highlight'); }
                 await this.sleep(30);
             }
-            
             if (minIdx !== i) {
                 this.stats.swaps++;
-                this.addLog(`Swapping ${this.data[i]} with minimum ${this.data[minIdx]}`, 'normal');
                 [this.data[i], this.data[minIdx]] = [this.data[minIdx], this.data[i]];
                 this.draw();
                 await this.sleep(50);
-            } else {
-                this.addLog(`Element at index ${i} is already in correct position`, 'normal');
             }
+            this.updateStatsDisplay();
         }
-        
         this.highlightIndices = [];
         this.draw();
-        this.addLog('Selection Sort completed!', 'success');
+        this.addLog('Selection Sort done!', 'success');
     }
 
     async insertionSort() {
-        let n = this.data.length;
-        this.addLog(`Starting Insertion Sort on array of ${n} elements`, 'normal');
-        
+        const n = this.data.length;
+        this.addLog(`Insertion Sort on ${n} elements`, 'normal');
         for (let i = 1; i < n; i++) {
-            let key = this.data[i];
-            let j = i - 1;
-            
+            let key = this.data[i], j = i - 1;
             this.highlightIndices = [i];
             this.draw();
-            this.addLog(`Taking element at index ${i} (value: ${key})`, 'normal');
             await this.sleep(50);
-            
             while (j >= 0) {
+                if (!this.isRunning) return;
                 if (this.isPaused) await this.waitForResume();
-                
                 this.stats.comparisons++;
                 this.highlightIndices = [j, j + 1];
                 this.draw();
-                
                 if (this.data[j] > key) {
                     this.stats.swaps++;
-                    this.addLog(`${this.data[j]} > ${key}, shifting ${this.data[j]} to right`, 'normal');
                     this.data[j + 1] = this.data[j];
                     j--;
                     this.draw();
                     await this.sleep(50);
-                } else {
-                    this.addLog(`${this.data[j]} ≤ ${key}, found correct position`, 'success');
-                    break;
-                }
+                } else break;
             }
             this.data[j + 1] = key;
-            this.addLog(`Inserted ${key} at position ${j + 1}`, 'highlight');
             this.draw();
+            this.updateStatsDisplay();
         }
-        
         this.highlightIndices = [];
         this.draw();
-        this.addLog('Insertion Sort completed!', 'success');
+        this.addLog('Insertion Sort done!', 'success');
     }
 
     async mergeSort(left, right) {
+        if (!this.isRunning) return;
         if (left >= right) return;
-        
-        let mid = Math.floor((left + right) / 2);
+        const mid = Math.floor((left + right) / 2);
         await this.mergeSort(left, mid);
         await this.mergeSort(mid + 1, right);
         await this.merge(left, mid, right);
     }
 
     async merge(left, mid, right) {
-        let leftArr = this.data.slice(left, mid + 1);
-        let rightArr = this.data.slice(mid + 1, right + 1);
-        
+        const leftArr = this.data.slice(left, mid + 1);
+        const rightArr = this.data.slice(mid + 1, right + 1);
         let i = 0, j = 0, k = left;
-        
         while (i < leftArr.length && j < rightArr.length) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
             this.stats.comparisons++;
             this.highlightIndices = [k];
+            this.data[k++] = leftArr[i] <= rightArr[j] ? leftArr[i++] : rightArr[j++];
+            this.stats.swaps++;
             this.draw();
             await this.sleep(50);
-            
-            if (leftArr[i] <= rightArr[j]) {
-                this.data[k] = leftArr[i];
-                i++;
-            } else {
-                this.data[k] = rightArr[j];
-                j++;
-            }
-            this.stats.swaps++;
-            k++;
-            this.draw();
         }
-        
-        while (i < leftArr.length) {
-            if (this.isPaused) await this.waitForResume();
-            this.data[k] = leftArr[i];
-            this.stats.swaps++;
-            k++;
-            i++;
-            this.draw();
-            await this.sleep(30);
-        }
-        
-        while (j < rightArr.length) {
-            if (this.isPaused) await this.waitForResume();
-            this.data[k] = rightArr[j];
-            this.stats.swaps++;
-            k++;
-            j++;
-            this.draw();
-            await this.sleep(30);
-        }
+        while (i < leftArr.length) { this.data[k++] = leftArr[i++]; this.stats.swaps++; this.draw(); await this.sleep(30); }
+        while (j < rightArr.length) { this.data[k++] = rightArr[j++]; this.stats.swaps++; this.draw(); await this.sleep(30); }
+        this.updateStatsDisplay();
     }
 
     async quickSort(low, high) {
+        if (!this.isRunning) return;
         if (low < high) {
-            let pi = await this.partition(low, high);
+            const pi = await this.partition(low, high);
             await this.quickSort(low, pi - 1);
             await this.quickSort(pi + 1, high);
         }
     }
 
     async partition(low, high) {
-        let pivot = this.data[high];
+        const pivot = this.data[high];
         let i = low - 1;
-        
         this.highlightIndices = [high];
-        this.draw();
-        
         for (let j = low; j < high; j++) {
+            if (!this.isRunning) return i + 1;
             if (this.isPaused) await this.waitForResume();
-            
             this.stats.comparisons++;
             this.highlightIndices = [j, high];
             this.draw();
             await this.sleep(50);
-            
             if (this.data[j] < pivot) {
                 i++;
                 this.stats.swaps++;
@@ -1238,235 +910,182 @@ function computeLPS(pattern) {
                 await this.sleep(50);
             }
         }
-        
         this.stats.swaps++;
         [this.data[i + 1], this.data[high]] = [this.data[high], this.data[i + 1]];
         this.draw();
-        await this.sleep(50);
-        
+        this.updateStatsDisplay();
         return i + 1;
     }
 
     async heapSort() {
-        let n = this.data.length;
-        
-        for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
-            await this.heapify(n, i);
-        }
-        
+        const n = this.data.length;
+        for (let i = Math.floor(n / 2) - 1; i >= 0; i--) await this.heapify(n, i);
         for (let i = n - 1; i > 0; i--) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
             this.stats.swaps++;
             [this.data[0], this.data[i]] = [this.data[i], this.data[0]];
             this.highlightIndices = [0, i];
             this.draw();
             await this.sleep(50);
-            
             await this.heapify(i, 0);
+            this.updateStatsDisplay();
         }
+        this.highlightIndices = [];
+        this.draw();
+        this.addLog('Heap Sort done!', 'success');
     }
 
     async heapify(n, i) {
-        let largest = i;
-        let left = 2 * i + 1;
-        let right = 2 * i + 2;
-        
+        let largest = i, l = 2 * i + 1, r = 2 * i + 2;
+        if (!this.isRunning) return;
         if (this.isPaused) await this.waitForResume();
-        
-        this.highlightIndices = [i, left, right].filter(x => x < n);
+        this.highlightIndices = [i, l, r].filter(x => x < n);
         this.draw();
-        await this.sleep(50);
-        
-        if (left < n) {
-            this.stats.comparisons++;
-            if (this.data[left] > this.data[largest]) {
-                largest = left;
-            }
-        }
-        
-        if (right < n) {
-            this.stats.comparisons++;
-            if (this.data[right] > this.data[largest]) {
-                largest = right;
-            }
-        }
-        
+        await this.sleep(40);
+        if (l < n) { this.stats.comparisons++; if (this.data[l] > this.data[largest]) largest = l; }
+        if (r < n) { this.stats.comparisons++; if (this.data[r] > this.data[largest]) largest = r; }
         if (largest !== i) {
             this.stats.swaps++;
             [this.data[i], this.data[largest]] = [this.data[largest], this.data[i]];
             this.draw();
-            await this.sleep(50);
+            await this.sleep(40);
             await this.heapify(n, largest);
         }
     }
 
     async countingSort() {
-        let max = Math.max(...this.data);
-        let count = new Array(max + 1).fill(0);
-        
-        for (let num of this.data) {
-            if (this.isPaused) await this.waitForResume();
-            count[num]++;
-            this.stats.operations++;
-            this.draw();
-            await this.sleep(30);
-        }
-        
+        const max = Math.max(...this.data);
+        const count = new Array(max + 1).fill(0);
+        for (const n of this.data) { count[n]++; this.stats.operations++; }
         let idx = 0;
         for (let i = 0; i <= max; i++) {
             while (count[i] > 0) {
+                if (!this.isRunning) return;
                 if (this.isPaused) await this.waitForResume();
-                this.data[idx] = i;
+                this.data[idx++] = i;
                 count[i]--;
-                idx++;
                 this.stats.operations++;
+                this.highlightIndices = [idx - 1];
                 this.draw();
                 await this.sleep(30);
             }
         }
+        this.updateStatsDisplay();
+        this.highlightIndices = [];
+        this.draw();
+        this.addLog('Counting Sort done!', 'success');
     }
 
     async radixSort() {
-        let max = Math.max(...this.data);
-        let exp = 1;
-        
-        while (Math.floor(max / exp) > 0) {
+        const max = Math.max(...this.data);
+        for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
             await this.countingSortByDigit(exp);
-            exp *= 10;
         }
+        this.addLog('Radix Sort done!', 'success');
     }
 
     async countingSortByDigit(exp) {
-        let n = this.data.length;
-        let output = new Array(n);
-        let count = new Array(10).fill(0);
-        
-        for (let i = 0; i < n; i++) {
-            let digit = Math.floor(this.data[i] / exp) % 10;
-            count[digit]++;
-        }
-        
-        for (let i = 1; i < 10; i++) {
-            count[i] += count[i - 1];
-        }
-        
+        const n = this.data.length;
+        const output = new Array(n);
+        const count = new Array(10).fill(0);
+        for (let i = 0; i < n; i++) count[Math.floor(this.data[i] / exp) % 10]++;
+        for (let i = 1; i < 10; i++) count[i] += count[i - 1];
         for (let i = n - 1; i >= 0; i--) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            let digit = Math.floor(this.data[i] / exp) % 10;
-            output[count[digit] - 1] = this.data[i];
-            count[digit]--;
-            this.draw();
-            await this.sleep(30);
+            const d = Math.floor(this.data[i] / exp) % 10;
+            output[--count[d]] = this.data[i];
         }
-        
         for (let i = 0; i < n; i++) {
             this.data[i] = output[i];
+            this.highlightIndices = [i];
+            this.draw();
+            await this.sleep(20);
         }
+        this.updateStatsDisplay();
     }
 
-    // Searching Algorithms
+    // ─── Searching ────────────────────────────────────────────────────────────
+
     async linearSearch() {
-        let target = this.data[this.targetIndex];
-        this.addLog(`Starting Linear Search for value ${target}`, 'normal');
-        
+        const target = this.data[this.targetIndex];
+        this.addLog(`Linear Search for value ${target}`, 'normal');
         for (let i = 0; i < this.data.length; i++) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
             this.stats.comparisons++;
             this.highlightIndices = [i];
             this.draw();
-            
+            this.updateStatsDisplay();
             if (this.data[i] === target) {
-                this.addLog(`Found ${target} at index ${i}!`, 'success');
                 this.foundIndex = i;
                 this.draw();
-                await this.sleep(500);
+                this.addLog(`Found ${target} at index ${i}!`, 'success');
                 return;
-            } else {
-                this.addLog(`Checking index ${i}: ${this.data[i]} ≠ ${target}`, 'normal');
-                await this.sleep(100);
             }
+            await this.sleep(100);
         }
-        
         this.addLog('Element not found', 'error');
     }
 
     async binarySearch() {
-        // First sort the array
         this.data.sort((a, b) => a - b);
         this.draw();
         await this.sleep(500);
-        
-        let target = this.data[this.targetIndex];
-        let left = 0;
-        let right = this.data.length - 1;
-        
-        this.addLog(`Starting Binary Search for value ${target}`, 'normal');
-        
+        const target = this.data[this.targetIndex];
+        let left = 0, right = this.data.length - 1;
+        this.addLog(`Binary Search for ${target} in sorted array`, 'normal');
         while (left <= right) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
-            let mid = Math.floor((left + right) / 2);
+            const mid = (left + right) >> 1;
             this.stats.comparisons++;
             this.highlightIndices = [left, mid, right];
             this.draw();
-            
-            if (this.data[mid] === target) {
-                this.addLog(`Found ${target} at index ${mid}!`, 'success');
-                this.foundIndex = mid;
-                this.draw();
-                await this.sleep(500);
-                return;
-            } else if (this.data[mid] < target) {
-                this.addLog(`${this.data[mid]} < ${target}, searching right half`, 'normal');
-                left = mid + 1;
-            } else {
-                this.addLog(`${this.data[mid]} > ${target}, searching left half`, 'normal');
-                right = mid - 1;
-            }
-            
+            this.updateStatsDisplay();
+            if (this.data[mid] === target) { this.foundIndex = mid; this.draw(); this.addLog(`Found at index ${mid}!`, 'success'); return; }
+            else if (this.data[mid] < target) { this.addLog(`${this.data[mid]} < ${target}, go right`, 'normal'); left = mid + 1; }
+            else { this.addLog(`${this.data[mid]} > ${target}, go left`, 'normal'); right = mid - 1; }
             await this.sleep(100);
         }
-        
-        this.addLog('Element not found', 'error');
+        this.addLog('Not found', 'error');
     }
 
     async jumpSearch() {
         this.data.sort((a, b) => a - b);
         this.draw();
         await this.sleep(500);
-        
-        let n = this.data.length;
-        let step = Math.floor(Math.sqrt(n));
-        let target = this.data[this.targetIndex];
+        const n = this.data.length, step = Math.floor(Math.sqrt(n));
+        const target = this.data[this.targetIndex];
         let prev = 0;
-        
-        while (this.data[Math.min(step, n) - 1] < target) {
+        this.addLog(`Jump Search for ${target}, step=${step}`, 'normal');
+        while (prev < n && this.data[Math.min(step, n) - 1] < target) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            prev = step;
-            step += Math.floor(Math.sqrt(n));
-            this.highlightIndices = [prev];
+            prev = step; step += Math.floor(Math.sqrt(n));
+            this.highlightIndices = [prev - 1];
             this.stats.comparisons++;
             this.draw();
+            this.updateStatsDisplay();
             await this.sleep(100);
             if (prev >= n) return;
         }
-        
-        while (this.data[prev] < target) {
+        while (prev < n && this.data[prev] < target) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
             this.highlightIndices = [prev];
             this.stats.comparisons++;
             this.draw();
+            this.updateStatsDisplay();
             await this.sleep(100);
             prev++;
-            if (prev >= n) return;
         }
-        
-        if (this.data[prev] === target) {
-            this.foundIndex = prev;
-            this.draw();
-            await this.sleep(500);
+        if (prev < n && this.data[prev] === target) {
+            this.foundIndex = prev; this.draw();
+            this.addLog(`Found at index ${prev}!`, 'success');
+        } else {
+            this.addLog('Not found', 'error');
         }
     }
 
@@ -1474,830 +1093,635 @@ function computeLPS(pattern) {
         this.data.sort((a, b) => a - b);
         this.draw();
         await this.sleep(500);
-        
-        let target = this.data[this.targetIndex];
-        let n = this.data.length;
-        
-        if (this.data[0] === target) {
-            this.foundIndex = 0;
-            this.draw();
-            await this.sleep(500);
-            return;
-        }
-        
+        const target = this.data[this.targetIndex], n = this.data.length;
+        if (this.data[0] === target) { this.foundIndex = 0; this.draw(); this.addLog('Found at index 0!', 'success'); return; }
         let i = 1;
         while (i < n && this.data[i] <= target) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            this.highlightIndices = [i];
-            this.stats.comparisons++;
-            this.draw();
+            this.highlightIndices = [i]; this.stats.comparisons++; this.draw(); this.updateStatsDisplay();
             await this.sleep(100);
             i *= 2;
         }
-        
-        let left = Math.floor(i / 2);
-        let right = Math.min(i, n - 1);
-        
+        let left = Math.floor(i / 2), right = Math.min(i, n - 1);
         while (left <= right) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            let mid = Math.floor((left + right) / 2);
+            const mid = (left + right) >> 1;
             this.stats.comparisons++;
             this.highlightIndices = [left, mid, right];
             this.draw();
+            this.updateStatsDisplay();
             await this.sleep(100);
-            
-            if (this.data[mid] === target) {
-                this.foundIndex = mid;
-                this.draw();
-                await this.sleep(500);
-                return;
-            } else if (this.data[mid] < target) {
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
+            if (this.data[mid] === target) { this.foundIndex = mid; this.draw(); this.addLog(`Found at ${mid}!`, 'success'); return; }
+            else if (this.data[mid] < target) left = mid + 1;
+            else right = mid - 1;
         }
+        this.addLog('Not found', 'error');
     }
 
     async interpolationSearch() {
         this.data.sort((a, b) => a - b);
         this.draw();
         await this.sleep(500);
-        
-        let target = this.data[this.targetIndex];
-        let lo = 0;
-        let hi = this.data.length - 1;
-        
+        const target = this.data[this.targetIndex];
+        let lo = 0, hi = this.data.length - 1;
+        this.addLog(`Interpolation Search for ${target}`, 'normal');
         while (lo <= hi && target >= this.data[lo] && target <= this.data[hi]) {
+            if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
-            let pos = lo + Math.floor(((target - this.data[lo]) * (hi - lo)) / (this.data[hi] - this.data[lo]));
+            const pos = lo + Math.floor(((target - this.data[lo]) * (hi - lo)) / (this.data[hi] - this.data[lo]));
             this.stats.comparisons++;
             this.highlightIndices = [lo, pos, hi];
             this.draw();
+            this.updateStatsDisplay();
             await this.sleep(100);
-            
-            if (this.data[pos] === target) {
-                this.foundIndex = pos;
-                this.draw();
-                await this.sleep(500);
-                return;
-            }
-            
-            if (this.data[pos] < target) {
-                lo = pos + 1;
-            } else {
-                hi = pos - 1;
-            }
+            if (this.data[pos] === target) { this.foundIndex = pos; this.draw(); this.addLog(`Found at ${pos}!`, 'success'); return; }
+            if (this.data[pos] < target) lo = pos + 1;
+            else hi = pos - 1;
         }
+        this.addLog('Not found', 'error');
     }
 
-    // Graph Algorithms
+    // ─── Graph ────────────────────────────────────────────────────────────────
+
     async runBFS() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        let startNode = 0;
-        let visited = new Set();
-        let queue = [startNode];
-        
-        this.addLog(`Starting BFS from node ${startNode}`, 'normal');
-        
-        visited.add(startNode);
-        this.graph.nodes[startNode].visited = true;
+        if (!this.graph) return;
+        const visited = new Set([0]);
+        const queue = [0];
+        this.graph.nodes[0].visited = true;
+        this.addLog('BFS from node 0', 'normal');
         this.draw();
         await this.sleep(500);
-        
         while (queue.length > 0 && this.isRunning) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            let current = queue.shift();
+            const current = queue.shift();
             this.stats.operations++;
-            this.addLog(`Visiting node ${current}`, 'normal');
-            
-            // Find neighbors
-            let neighbors = this.graph.edges
-                .filter(e => e.from === current)
-                .map(e => e.to);
-            
-            for (let neighbor of neighbors) {
-                if (!visited.has(neighbor) && this.isRunning) {
-                    if (this.isPaused) await this.waitForResume();
-                    if (!this.isRunning) return;
-                    
-                    visited.add(neighbor);
-                    this.graph.nodes[neighbor].visited = true;
-                    this.currentEdge = { from: current, to: neighbor };
-                    this.addLog(`Exploring edge ${current} → ${neighbor}`, 'highlight');
+            this.addLog(`Visit node ${current}`, 'normal');
+            this.updateStatsDisplay();
+            for (const edge of this.graph.edges.filter(e => e.from === current)) {
+                if (!visited.has(edge.to) && this.isRunning) {
+                    visited.add(edge.to);
+                    this.graph.nodes[edge.to].visited = true;
+                    this.currentEdge = edge;
+                    this.addLog(`Enqueue ${edge.to} via edge ${current}→${edge.to}`, 'highlight');
                     this.draw();
                     await this.sleep(500);
-                    
-                    queue.push(neighbor);
+                    queue.push(edge.to);
                 }
             }
         }
-        
-        this.addLog('BFS traversal completed!', 'success');
+        this.addLog('BFS complete!', 'success');
     }
 
     async runDFS() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        this.addLog('Starting DFS traversal', 'normal');
-        let visited = new Set();
+        if (!this.graph) return;
+        this.addLog('DFS from node 0', 'normal');
+        const visited = new Set();
         await this.dfsVisit(0, visited);
-        this.addLog('DFS traversal completed!', 'success');
+        this.addLog('DFS complete!', 'success');
     }
 
     async dfsVisit(node, visited) {
         if (!this.isRunning) return;
         if (this.isPaused) await this.waitForResume();
-        if (!this.isRunning) return;
-        
         visited.add(node);
         this.graph.nodes[node].visited = true;
         this.stats.operations++;
-        this.addLog(`Visiting node ${node}`, 'normal');
+        this.addLog(`Visit node ${node}`, 'normal');
+        this.updateStatsDisplay();
         this.draw();
         await this.sleep(500);
-        
-        let neighbors = this.graph.edges
-            .filter(e => e.from === node)
-            .map(e => e.to);
-        
-        for (let neighbor of neighbors) {
-            if (!visited.has(neighbor) && this.isRunning) {
-                this.currentEdge = { from: node, to: neighbor };
-                this.addLog(`Exploring edge ${node} → ${neighbor}`, 'highlight');
-                await this.dfsVisit(neighbor, visited);
+        for (const edge of this.graph.edges.filter(e => e.from === node)) {
+            if (!visited.has(edge.to) && this.isRunning) {
+                this.currentEdge = edge;
+                await this.dfsVisit(edge.to, visited);
             }
         }
     }
 
     async runDijkstra() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        const startNode = 0;
-        const distances = this.graph.nodes.map(() => Infinity);
-        distances[startNode] = 0;
+        if (!this.graph) return;
+        const dist = this.graph.nodes.map(() => Infinity);
+        dist[0] = 0;
         const visited = new Set();
-        const pq = [{ node: startNode, dist: 0 }];
-        
+        const pq = [{ node: 0, dist: 0 }];
+        this.addLog("Dijkstra from node 0", 'normal');
         while (pq.length > 0 && this.isRunning) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             pq.sort((a, b) => a.dist - b.dist);
-            const current = pq.shift();
-            const node = current.node;
-            
+            const { node } = pq.shift();
             if (visited.has(node)) continue;
-            
             visited.add(node);
             this.currentNode = node;
-            this.graph.nodes[node].distance = distances[node];
+            this.graph.nodes[node].distance = dist[node];
             this.draw();
             this.stats.operations++;
+            this.updateStatsDisplay();
             await this.sleep(400);
-            
-            const neighbors = this.graph.edges.filter(e => e.from === node);
-            for (const edge of neighbors) {
-                if (this.isRunning && !visited.has(edge.to)) {
-                    this.currentEdge = { from: node, to: edge.to };
-                    const newDist = distances[node] + edge.weight;
-                    if (newDist < distances[edge.to]) {
-                        distances[edge.to] = newDist;
-                        pq.push({ node: edge.to, dist: newDist });
-                        this.graph.nodes[edge.to].distance = newDist;
+            for (const edge of this.graph.edges.filter(e => e.from === node)) {
+                if (!visited.has(edge.to) && this.isRunning) {
+                    this.currentEdge = edge;
+                    const nd = dist[node] + edge.weight;
+                    if (nd < dist[edge.to]) {
+                        dist[edge.to] = nd;
+                        this.graph.nodes[edge.to].distance = nd;
+                        pq.push({ node: edge.to, dist: nd });
                         this.draw();
                         await this.sleep(200);
                     }
                 }
             }
         }
+        this.addLog("Dijkstra complete!", 'success');
     }
 
     async runBellmanFord() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        const startNode = 0;
-        const distances = this.graph.nodes.map(() => Infinity);
-        distances[startNode] = 0;
-        
+        if (!this.graph) return;
+        const dist = this.graph.nodes.map(() => Infinity);
+        dist[0] = 0;
+        this.addLog("Bellman-Ford from node 0", 'normal');
         for (let i = 0; i < this.graph.nodes.length - 1 && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             let updated = false;
             for (const edge of this.graph.edges) {
                 if (!this.isRunning) return;
-                
                 this.currentEdge = edge;
-                this.currentNode = edge.from;
-                
-                if (distances[edge.from] !== Infinity && distances[edge.from] + edge.weight < distances[edge.to]) {
-                    distances[edge.to] = distances[edge.from] + edge.weight;
-                    this.graph.nodes[edge.to].distance = distances[edge.to];
+                if (dist[edge.from] !== Infinity && dist[edge.from] + edge.weight < dist[edge.to]) {
+                    dist[edge.to] = dist[edge.from] + edge.weight;
+                    this.graph.nodes[edge.to].distance = dist[edge.to];
                     updated = true;
                     this.stats.operations++;
+                    this.updateStatsDisplay();
                     this.draw();
                     await this.sleep(150);
                 }
             }
-            
             if (!updated) break;
         }
+        this.addLog("Bellman-Ford complete!", 'success');
     }
 
     async runFloydWarshall() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
+        if (!this.graph) return;
         const n = this.graph.nodes.length;
-        const dist = Array(n).fill(null).map(() => Array(n).fill(Infinity));
-        
-        for (let i = 0; i < n; i++) dist[i][i] = 0;
-        for (const edge of this.graph.edges) {
-            dist[edge.from][edge.to] = edge.weight;
-        }
-        
+        const dist = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => i === j ? 0 : Infinity));
+        for (const e of this.graph.edges) dist[e.from][e.to] = e.weight;
+        this.addLog("Floyd-Warshall", 'normal');
         for (let k = 0; k < n && this.isRunning; k++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             this.currentNode = k;
             this.draw();
             await this.sleep(300);
-            
             for (let i = 0; i < n && this.isRunning; i++) {
                 for (let j = 0; j < n && this.isRunning; j++) {
                     if (dist[i][k] !== Infinity && dist[k][j] !== Infinity && dist[i][k] + dist[k][j] < dist[i][j]) {
                         dist[i][j] = dist[i][k] + dist[k][j];
                         this.stats.operations++;
+                        this.updateStatsDisplay();
                         this.draw();
                         await this.sleep(50);
                     }
                 }
             }
         }
+        this.addLog("Floyd-Warshall complete!", 'success');
     }
 
     async runKruskal() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
+        if (!this.graph) return;
         const edges = [...this.graph.edges].sort((a, b) => a.weight - b.weight);
         const parent = this.graph.nodes.map((_, i) => i);
+        const find = (x) => { if (parent[x] !== x) parent[x] = find(parent[x]); return parent[x]; };
+        const union = (x, y) => { const [px, py] = [find(x), find(y)]; if (px !== py) { parent[px] = py; return true; } return false; };
         const mst = [];
-        
-        const find = (x) => {
-            if (parent[x] !== x) parent[x] = find(parent[x]);
-            return parent[x];
-        };
-        
-        const union = (x, y) => {
-            const px = find(x), py = find(y);
-            if (px !== py) { parent[px] = py; return true; }
-            return false;
-        };
-        
+        this.addLog("Kruskal's MST", 'normal');
         for (const edge of edges) {
             if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
             this.currentEdge = edge;
             this.draw();
-            
             if (union(edge.from, edge.to)) {
                 mst.push(edge);
                 this.stats.operations++;
+                this.updateStatsDisplay();
+                this.addLog(`Added edge ${edge.from}→${edge.to} (w:${edge.weight})`, 'highlight');
                 await this.sleep(400);
             } else {
                 await this.sleep(200);
             }
-            
             if (mst.length === this.graph.nodes.length - 1) break;
         }
+        this.addLog("Kruskal's complete!", 'success');
     }
 
     async runPrim() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        const startNode = 0;
-        const visited = new Set([startNode]);
-        const mst = [];
-        const pq = [];
-        
-        // Add edges from start node
-        this.graph.edges.filter(e => e.from === startNode).forEach(e => {
-            pq.push(e);
-        });
-        
+        if (!this.graph) return;
+        const visited = new Set([0]);
+        this.graph.nodes[0].visited = true;
+        const pq = [...this.graph.edges.filter(e => e.from === 0)];
+        this.addLog("Prim's MST from node 0", 'normal');
         while (pq.length > 0 && this.isRunning && visited.size < this.graph.nodes.length) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             pq.sort((a, b) => a.weight - b.weight);
             const edge = pq.shift();
-            
             this.currentEdge = edge;
-            
             if (!visited.has(edge.to)) {
                 visited.add(edge.to);
-                mst.push(edge);
                 this.graph.nodes[edge.to].visited = true;
                 this.stats.operations++;
+                this.updateStatsDisplay();
+                this.addLog(`Add node ${edge.to} (w:${edge.weight})`, 'highlight');
                 this.draw();
                 await this.sleep(400);
-                
-                // Add edges from new node
-                this.graph.edges.filter(e => e.from === edge.to && !visited.has(e.to)).forEach(e => {
-                    pq.push(e);
-                });
+                pq.push(...this.graph.edges.filter(e => e.from === edge.to && !visited.has(e.to)));
             } else {
                 await this.sleep(200);
             }
         }
+        this.addLog("Prim's complete!", 'success');
     }
 
     async runTopologicalSort() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        const inDegree = this.graph.nodes.map(() => 0);
-        for (const edge of this.graph.edges) {
-            inDegree[edge.to]++;
-        }
-        
-        const queue = [];
-        for (let i = 0; i < this.graph.nodes.length; i++) {
-            if (inDegree[i] === 0) queue.push(i);
-        }
-        
+        if (!this.graph) return;
+        const inDeg = this.graph.nodes.map(() => 0);
+        for (const e of this.graph.edges) inDeg[e.to]++;
+        const queue = this.graph.nodes.map((_, i) => i).filter(i => inDeg[i] === 0);
         const result = [];
-        
+        this.addLog("Topological Sort", 'normal');
         while (queue.length > 0 && this.isRunning) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             const node = queue.shift();
             this.currentNode = node;
             this.graph.nodes[node].visited = true;
             result.push(node);
             this.stats.operations++;
+            this.updateStatsDisplay();
             this.draw();
             await this.sleep(400);
-            
-            const neighbors = this.graph.edges.filter(e => e.from === node);
-            for (const edge of neighbors) {
+            for (const edge of this.graph.edges.filter(e => e.from === node)) {
                 if (this.isRunning) {
-                    inDegree[edge.to]--;
-                    if (inDegree[edge.to] === 0) {
-                        queue.push(edge.to);
-                    }
+                    inDeg[edge.to]--;
+                    if (inDeg[edge.to] === 0) queue.push(edge.to);
                     this.currentEdge = edge;
                     this.draw();
                     await this.sleep(150);
                 }
             }
         }
+        this.addLog(`Order: [${result.join(' → ')}]`, 'success');
     }
 
     async runAStar() {
-        if (!this.graph || this.graph.nodes.length === 0) return;
-        
-        const startNode = 0;
-        const goalNode = this.graph.nodes.length - 1;
-        const openSet = [{ node: startNode, g: 0, h: 0, f: 0 }];
-        const cameFrom = {};
+        if (!this.graph) return;
+        const goal = this.graph.nodes.length - 1;
+        const openSet = [{ node: 0, g: 0, h: 0, f: 0 }];
         const gScore = this.graph.nodes.map(() => Infinity);
-        gScore[startNode] = 0;
-        
-        const heuristic = (a, b) => {
-            const na = this.graph.nodes[a], nb = this.graph.nodes[b];
-            return Math.sqrt(Math.pow(na.x - nb.x, 2) + Math.pow(na.y - nb.y, 2));
+        gScore[0] = 0;
+        const h = (a, b) => {
+            const [na, nb] = [this.graph.nodes[a], this.graph.nodes[b]];
+            return Math.hypot(na.x - nb.x, na.y - nb.y);
         };
-        
+        this.addLog(`A* from 0 to ${goal}`, 'normal');
         while (openSet.length > 0 && this.isRunning) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             openSet.sort((a, b) => a.f - b.f);
-            const current = openSet.shift();
-            const node = current.node;
-            
+            const { node } = openSet.shift();
             this.currentNode = node;
             this.graph.nodes[node].visited = true;
             this.draw();
             this.stats.operations++;
+            this.updateStatsDisplay();
             await this.sleep(300);
-            
-            if (node === goalNode) break;
-            
-            const neighbors = this.graph.edges.filter(e => e.from === node);
-            for (const edge of neighbors) {
-                if (this.isRunning) {
+            if (node === goal) { this.addLog('Goal reached!', 'success'); return; }
+            for (const edge of this.graph.edges.filter(e => e.from === node)) {
+                if (!this.isRunning) return;
+                const tentG = gScore[node] + edge.weight;
+                if (tentG < gScore[edge.to]) {
+                    gScore[edge.to] = tentG;
+                    const hVal = h(edge.to, goal);
+                    openSet.push({ node: edge.to, g: tentG, h: hVal, f: tentG + hVal });
                     this.currentEdge = edge;
-                    const tentativeG = gScore[node] + edge.weight;
-                    
-                    if (tentativeG < gScore[edge.to]) {
-                        cameFrom[edge.to] = node;
-                        gScore[edge.to] = tentativeG;
-                        const h = heuristic(edge.to, goalNode);
-                        const f = tentativeG + h;
-                        openSet.push({ node: edge.to, g: tentativeG, h, f });
-                        this.draw();
-                        await this.sleep(150);
-                    }
+                    this.draw();
+                    await this.sleep(150);
                 }
             }
         }
+        this.addLog('A* complete', 'success');
     }
 
+    // ─── Dynamic Programming ──────────────────────────────────────────────────
+
     async visualizeFibonacci() {
-        let n = 10;
-        let fib = [0, 1];
-        
+        const n = 10;
+        const fib = [0, 1];
         this.fibSequence = [0, 1];
         this.highlightIndices = [];
-        
-        // Initial draw
         this.draw();
-        this.addLog('Starting Fibonacci sequence: F(0)=0, F(1)=1', 'highlight');
-        
+        this.addLog('Fibonacci: F(0)=0, F(1)=1', 'highlight');
         for (let i = 2; i <= n && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             fib[i] = fib[i - 1] + fib[i - 2];
-            this.stats.operations++;
             this.fibSequence = fib.slice(0, i + 1);
             this.highlightIndices = [i - 1, i - 2];
-            this.addLog(`F(${i}) = F(${i-1}) + F(${i-2}) = ${fib[i-1]} + ${fib[i-2]} = ${fib[i]}`, 'highlight');
+            this.stats.operations++;
+            this.addLog(`F(${i}) = ${fib[i-1]} + ${fib[i-2]} = ${fib[i]}`, 'highlight');
+            this.updateStatsDisplay();
             this.draw();
             await this.sleep(500);
         }
-        
-        this.addLog(`Fibonacci sequence complete! F(${n}) = ${fib[n]}`, 'success');
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
+        this.addLog(`Done! F(${n}) = ${fib[n]}`, 'success');
     }
 
     async visualizeLCS() {
-        const s1 = "ABCDGH";
-        const s2 = "AEDFHR";
+        const s1 = "ABCDGH", s2 = "AEDFHR";
         const m = s1.length, n = s2.length;
-        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-        
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
         this.lcsData = { s1, s2, dp, currentI: 0, currentJ: 0 };
-        
-        // Initial draw
         this.draw();
-        this.addLog('Finding Longest Common Subsequence', 'highlight');
-        
+        this.addLog('LCS of "ABCDGH" and "AEDFHR"', 'highlight');
         for (let i = 1; i <= m && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             for (let j = 1; j <= n && this.isRunning; j++) {
                 if (!this.isRunning) return;
-                
                 this.lcsData.currentI = i;
                 this.lcsData.currentJ = j;
-                
                 if (s1[i - 1] === s2[j - 1]) {
                     dp[i][j] = dp[i - 1][j - 1] + 1;
-                    this.addLog(`Match: '${s1[i-1]}' == '${s2[j-1]}', LCS length = ${dp[i][j]}`, 'highlight');
+                    this.addLog(`Match '${s1[i-1]}': LCS=${dp[i][j]}`, 'highlight');
                 } else {
                     dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-                    this.addLog(`No match: max(LCS[${i-1}][${j}], LCS[${i}][${j-1}]) = ${dp[i][j]}`, 'highlight');
                 }
-                
                 this.stats.operations++;
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(100);
             }
         }
-        
         this.addLog(`LCS length: ${dp[m][n]}`, 'success');
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeKnapsack() {
-        const weights = [2, 3, 4, 5];
-        const values = [3, 4, 5, 6];
-        const capacity = 8;
+        const weights = [2, 3, 4, 5], values = [3, 4, 5, 6], capacity = 8;
         const n = weights.length;
-        const dp = Array(n + 1).fill(null).map(() => Array(capacity + 1).fill(0));
-        
+        const dp = Array.from({ length: n + 1 }, () => Array(capacity + 1).fill(0));
         this.knapsackData = { weights, values, capacity, dp, currentI: 0, currentW: 0 };
-        
-        // Initial draw
         this.draw();
-        
+        this.addLog('0/1 Knapsack, capacity=8', 'highlight');
         for (let i = 1; i <= n && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             for (let w = 0; w <= capacity && this.isRunning; w++) {
                 if (!this.isRunning) return;
-                
                 this.knapsackData.currentI = i;
                 this.knapsackData.currentW = w;
-                
-                if (weights[i - 1] <= w) {
-                    dp[i][w] = Math.max(dp[i - 1][w], values[i - 1] + dp[i - 1][w - weights[i - 1]]);
-                } else {
-                    dp[i][w] = dp[i - 1][w];
-                }
-                
+                dp[i][w] = weights[i - 1] <= w
+                    ? Math.max(dp[i - 1][w], values[i - 1] + dp[i - 1][w - weights[i - 1]])
+                    : dp[i - 1][w];
                 this.stats.operations++;
-                this.addLog(`Item ${i}, Capacity ${w}: Value = ${dp[i][w]}`, 'highlight');
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(80);
             }
         }
-        
-        this.addLog(`Maximum value: ${dp[n][capacity]}`, 'success');
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
+        this.addLog(`Max value: ${dp[n][capacity]}`, 'success');
     }
 
     async visualizeCoinChange() {
-        const coins = [1, 2, 5];
-        const amount = 11;
+        const coins = [1, 2, 5], amount = 11;
         const dp = Array(amount + 1).fill(Infinity);
         dp[0] = 0;
-        
         this.coinData = { coins, amount, dp, currentCoin: 0, currentAmt: 0 };
-        
-        // Initial draw
         this.draw();
-        
-        for (let coin of coins) {
+        this.addLog('Coin Change: coins=[1,2,5], amount=11', 'highlight');
+        for (const coin of coins) {
             if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
             this.coinData.currentCoin = coin;
-            this.addLog(`Using coin: ${coin}`, 'highlight');
-            
             for (let a = coin; a <= amount && this.isRunning; a++) {
                 if (!this.isRunning) return;
-                
                 this.coinData.currentAmt = a;
-                
-                if (dp[a - coin] !== Infinity) {
-                    dp[a] = Math.min(dp[a], dp[a - coin] + 1);
-                    this.addLog(`Amount ${a}: min coins = ${dp[a]}`, 'highlight');
-                }
-                
+                if (dp[a - coin] !== Infinity) dp[a] = Math.min(dp[a], dp[a - coin] + 1);
                 this.stats.operations++;
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(150);
             }
         }
-        
-        this.addLog(`Minimum coins needed: ${dp[amount]}`, 'success');
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
+        this.addLog(`Min coins: ${dp[amount]}`, 'success');
     }
 
     async visualizeEditDistance() {
-        const s1 = "INTENTION";
-        const s2 = "EXECUTION";
+        const s1 = "INTENTION", s2 = "EXECUTION";
         const m = s1.length, n = s2.length;
-        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-        
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
         for (let i = 0; i <= m; i++) dp[i][0] = i;
         for (let j = 0; j <= n; j++) dp[0][j] = j;
-        
         this.editData = { s1, s2, dp, currentI: 0, currentJ: 0 };
-        
-        // Initial draw
         this.draw();
-        
+        this.addLog('Edit Distance: "INTENTION" → "EXECUTION"', 'highlight');
         for (let i = 1; i <= m && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             for (let j = 1; j <= n && this.isRunning; j++) {
                 if (!this.isRunning) return;
-                
                 this.editData.currentI = i;
                 this.editData.currentJ = j;
-                
-                if (s1[i - 1] === s2[j - 1]) {
-                    dp[i][j] = dp[i - 1][j - 1];
-                    this.addLog(`Match: '${s1[i-1]}' == '${s2[j-1]}', dp[${i}][${j}] = ${dp[i][j]}`, 'highlight');
-                } else {
-                    dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-                    this.addLog(`Edit: dp[${i}][${j}] = 1 + min(${dp[i-1][j]}, ${dp[i][j-1]}, ${dp[i-1][j-1]})`, 'highlight');
-                }
-                
+                dp[i][j] = s1[i - 1] === s2[j - 1]
+                    ? dp[i - 1][j - 1]
+                    : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
                 this.stats.operations++;
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(80);
             }
         }
-        
         this.addLog(`Edit distance: ${dp[m][n]}`, 'success');
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
     }
 
     async visualizeMatrixChain() {
         const dims = [10, 20, 30, 40, 30];
         const n = dims.length - 1;
-        const dp = Array(n + 1).fill(null).map(() => Array(n + 1).fill(0));
-        
+        const dp = Array.from({ length: n + 1 }, () => Array(n + 1).fill(0));
         this.matrixData = { dims, dp, currentLen: 0, currentI: 0, currentJ: 0 };
-        
-        // Initial draw
         this.draw();
-        
+        this.addLog('Matrix Chain: [10×20, 20×30, 30×40, 40×30]', 'highlight');
         for (let len = 2; len <= n && this.isRunning; len++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             this.matrixData.currentLen = len;
-            this.addLog(`Chain length: ${len}`, 'highlight');
-            
             for (let i = 1; i <= n - len + 1 && this.isRunning; i++) {
-                if (!this.isRunning) return;
-                
                 const j = i + len - 1;
                 this.matrixData.currentI = i;
                 this.matrixData.currentJ = j;
-                
                 dp[i][j] = Infinity;
-                
                 for (let k = i; k < j && this.isRunning; k++) {
-                    if (!this.isRunning) return;
-                    
                     const cost = dp[i][k] + dp[k + 1][j] + dims[i - 1] * dims[k] * dims[j];
                     dp[i][j] = Math.min(dp[i][j], cost);
-                    this.addLog(`Split at ${k}: cost = ${cost}`, 'highlight');
-                    
                     this.stats.operations++;
+                    this.updateStatsDisplay();
                     this.draw();
                     await this.sleep(100);
                 }
             }
         }
-        
-        this.addLog(`Minimum multiplications: ${dp[1][n]}`, 'success');
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
+        this.addLog(`Min multiplications: ${dp[1][n]}`, 'success');
     }
+
+    // ─── Tree ─────────────────────────────────────────────────────────────────
 
     async visualizeBST() {
         const values = [50, 30, 70, 20, 40, 60, 80];
         this.bstNodes = [];
         this.bstEdges = [];
-        
-        const insertNode = async (value) => {
+        const cx = this.canvas.width / 2;
+
+        const insertBST = (root, value, x, y, offset) => {
+            if (root === null) return { id: this.bstNodes.length, value, x, y, left: null, right: null };
+            if (value < root.value) root.left = insertBST(root.left, value, x - offset, y + 70, offset / 2);
+            else root.right = insertBST(root.right, value, x + offset, y + 70, offset / 2);
+            return root;
+        };
+
+        let root = null;
+        const flattenBST = (node, parentId) => {
+            if (!node) return;
+            const id = this.bstNodes.length;
+            this.bstNodes.push({ id, value: node.value, x: node.x, y: node.y, visited: false });
+            if (parentId !== null) this.bstEdges.push({ from: parentId, to: id });
+            flattenBST(node.left, id);
+            flattenBST(node.right, id);
+        };
+
+        this.addLog('Building BST', 'normal');
+        for (const val of values) {
             if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
-            const newNode = { id: this.bstNodes.length, value, x: 0, y: 0, visited: false };
-            this.bstNodes.push(newNode);
-            
-            if (this.bstNodes.length === 1) {
-                newNode.x = this.canvas.width / 2;
-                newNode.y = 60;
-            } else {
-                // Simple positioning
-                const parentIdx = Math.floor((this.bstNodes.length - 2) / 2);
-                const parent = this.bstNodes[parentIdx];
-                const isLeft = value < parent.value;
-                const level = Math.floor(Math.log2(this.bstNodes.length)) + 1;
-                const spacing = this.canvas.width / Math.pow(2, level);
-                
-                newNode.y = parent.y + 70;
-                newNode.x = isLeft ? parent.x - spacing : parent.x + spacing;
-                
-                this.bstEdges.push({ from: parentIdx, to: this.bstNodes.length - 1 });
-            }
-            
-            this.currentNode = this.bstNodes.length - 1;
+            root = insertBST(root, val, cx, 60, cx / 2);
+            this.bstNodes = [];
+            this.bstEdges = [];
+            flattenBST(root, null);
             this.stats.operations++;
+            this.updateStatsDisplay();
+            this.addLog(`Insert ${val}`, 'highlight');
             this.draw();
             await this.sleep(400);
-        };
-        
-        for (const val of values) {
-            await insertNode(val);
         }
+        this.addLog('BST built!', 'success');
     }
 
     async visualizeAVL() {
-        // Simplified AVL visualization showing basic insertions
-        const values = [30, 20, 40, 10, 25];
+        const values = [30, 20, 40, 10, 25, 35, 50];
         this.avlNodes = [];
         this.avlEdges = [];
-        
+        this.addLog('Building AVL Tree (simplified)', 'normal');
+        const cx = this.canvas.width / 2;
         for (let i = 0; i < values.length && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            const node = { id: i, value: values[i], x: 50 + i * 80, y: 100 + (i % 3) * 80, visited: true };
+            const level = Math.floor(Math.log2(i + 1));
+            const posInLevel = i - (Math.pow(2, level) - 1);
+            const nodesInLevel = Math.pow(2, level);
+            const node = {
+                id: i, value: values[i],
+                x: (cx / nodesInLevel) * (2 * posInLevel + 1),
+                y: 60 + level * 80,
+                visited: true
+            };
             this.avlNodes.push(node);
-            
-            if (i > 0) {
-                this.avlEdges.push({ from: i - 1, to: i });
-            }
-            
+            if (i > 0) this.avlEdges.push({ from: Math.floor((i - 1) / 2), to: i });
             this.currentNode = i;
             this.stats.operations++;
+            this.updateStatsDisplay();
+            this.addLog(`Insert ${values[i]}`, 'highlight');
             this.draw();
             await this.sleep(500);
         }
+        this.addLog('AVL insertion done!', 'success');
     }
 
     async visualizeRedBlack() {
-        // Simplified Red-Black Tree visualization
         const values = [41, 38, 31, 12, 19, 8];
         this.rbNodes = [];
         this.rbEdges = [];
-        
+        this.addLog('Building Red-Black Tree (simplified)', 'normal');
+        const cx = this.canvas.width / 2;
         for (let i = 0; i < values.length && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            const isRed = i % 2 === 0;
-            const node = { 
-                id: i, 
-                value: values[i], 
-                x: 50 + i * 80, 
-                y: 100 + (i % 3) * 80, 
+            const level = Math.floor(Math.log2(i + 1));
+            const posInLevel = i - (Math.pow(2, level) - 1);
+            const nodesInLevel = Math.pow(2, level);
+            const node = {
+                id: i, value: values[i],
+                x: (cx / nodesInLevel) * (2 * posInLevel + 1),
+                y: 60 + level * 80,
                 visited: true,
-                color: isRed ? 'red' : 'black'
+                color: i % 2 === 0 ? 'black' : 'red'
             };
             this.rbNodes.push(node);
-            
-            if (i > 0) {
-                this.rbEdges.push({ from: i - 1, to: i });
-            }
-            
+            if (i > 0) this.rbEdges.push({ from: Math.floor((i - 1) / 2), to: i });
             this.currentNode = i;
             this.stats.operations++;
+            this.updateStatsDisplay();
+            this.addLog(`Insert ${values[i]} (${node.color})`, 'highlight');
             this.draw();
             await this.sleep(500);
         }
+        this.addLog('Red-Black insertion done!', 'success');
     }
 
     async visualizeTreeTraversals() {
-        // Show inorder traversal animation
-        const values = [50, 30, 70, 20, 40, 60, 80];
+        const values = [1, 2, 3, 4, 5, 6, 7];
         this.traversalOrder = [];
-        this.treeNodes = values.map((v, i) => ({
-            id: i,
-            value: v,
-            x: 50 + (i % 4) * 100,
-            y: 50 + Math.floor(i / 4) * 80,
-            visited: false
-        }));
-        
-        for (let i = 0; i < this.treeNodes.length && this.isRunning; i++) {
-            if (this.isPaused) await this.waitForResume();
+        const cx = this.canvas.width / 2;
+        this.treeNodes = values.map((v, i) => {
+            const level = Math.floor(Math.log2(i + 1));
+            const posInLevel = i - (Math.pow(2, level) - 1);
+            const nodesInLevel = Math.pow(2, level);
+            return { id: i, value: v, x: (cx / nodesInLevel) * (2 * posInLevel + 1), y: 60 + level * 80, visited: false };
+        });
+        this.treeEdges = values.map((_, i) => i > 0 ? { from: Math.floor((i - 1) / 2), to: i } : null).filter(Boolean);
+        this.addLog('Inorder traversal', 'normal');
+
+        const inorder = async (i) => {
+            if (i >= values.length || !this.isRunning) return;
+            await inorder(2 * i + 1);
             if (!this.isRunning) return;
-            
+            if (this.isPaused) await this.waitForResume();
             this.treeNodes[i].visited = true;
-            this.traversalOrder.push(this.treeNodes[i].value);
+            this.traversalOrder.push(values[i]);
             this.currentNode = i;
             this.stats.operations++;
+            this.updateStatsDisplay();
+            this.addLog(`Visit ${values[i]}`, 'highlight');
             this.draw();
             await this.sleep(400);
-        }
+            await inorder(2 * i + 2);
+        };
+
+        await inorder(0);
+        this.addLog(`Inorder: [${this.traversalOrder.join(', ')}]`, 'success');
     }
 
     async visualizeHeapOps() {
-        const values = [4, 10, 3, 5, 1];
+        const values = [4, 10, 3, 5, 1, 8, 7];
         this.heapArray = [...values];
-        
-        // Build max heap
+        this.addLog('Building max-heap', 'normal');
         for (let i = Math.floor(values.length / 2) - 1; i >= 0 && this.isRunning; i--) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             await this.heapifyDown(i, values.length);
+            this.stats.operations++;
+            this.updateStatsDisplay();
         }
+        this.addLog(`Heap: [${this.heapArray.join(', ')}]`, 'success');
     }
 
     async heapifyDown(i, n) {
         let largest = i;
-        const left = 2 * i + 1;
-        const right = 2 * i + 2;
-        
-        this.highlightIndices = [i];
+        const l = 2 * i + 1, r = 2 * i + 2;
+        if (!this.isRunning) return;
+        if (this.isPaused) await this.waitForResume();
+        this.highlightIndices = [i, l, r].filter(x => x < n);
         this.draw();
         await this.sleep(300);
-        
-        if (left < n && this.heapArray[left] > this.heapArray[largest]) {
-            largest = left;
-        }
-        if (right < n && this.heapArray[right] > this.heapArray[largest]) {
-            largest = right;
-        }
-        
+        if (l < n && this.heapArray[l] > this.heapArray[largest]) largest = l;
+        if (r < n && this.heapArray[r] > this.heapArray[largest]) largest = r;
         if (largest !== i) {
             [this.heapArray[i], this.heapArray[largest]] = [this.heapArray[largest], this.heapArray[i]];
             this.stats.swaps++;
@@ -2310,261 +1734,174 @@ function computeLPS(pattern) {
 
     async visualizeTrie() {
         const words = ["CAT", "CAR", "CART", "DOG"];
-        this.trieNodes = [{ id: 0, char: 'root', x: this.canvas.width / 2, y: 50, visited: false }];
+        this.trieNodes = [{ id: 0, char: '∅', x: this.canvas.width / 2, y: 50, visited: false }];
         this.trieEdges = [];
-        
         let nodeId = 1;
-        const levelHeight = 70;
-        
+        this.addLog('Building Trie', 'normal');
+
         for (const word of words) {
             if (!this.isRunning) return;
             if (this.isPaused) await this.waitForResume();
-            
+            this.addLog(`Insert "${word}"`, 'highlight');
             let parentId = 0;
-            let x = this.trieNodes[0].x;
-            let y = this.trieNodes[0].y;
-            
+            const parent = this.trieNodes[0];
+            let cx = parent.x, cy = parent.y;
             for (let c = 0; c < word.length && this.isRunning; c++) {
                 const char = word[c];
-                const newNode = {
-                    id: nodeId,
-                    char: char,
-                    x: x + (c - 1) * 40,
-                    y: y + levelHeight,
-                    visited: true
-                };
-                
+                const spread = 120 / (c + 1);
+                const offsetX = (words.indexOf(word) - words.length / 2) * spread;
+                const newNode = { id: nodeId, char, x: parent.x + offsetX + (c * 20), y: cy + 70, visited: true };
                 this.trieNodes.push(newNode);
                 this.trieEdges.push({ from: parentId, to: nodeId });
-                
                 this.currentNode = nodeId;
                 parentId = nodeId;
-                x = newNode.x;
-                y = newNode.y;
+                cy = newNode.y;
                 nodeId++;
-                
                 this.stats.operations++;
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(300);
             }
         }
+        this.addLog('Trie built!', 'success');
     }
 
+    // ─── String ───────────────────────────────────────────────────────────────
+
     async naiveSearch() {
-        const text = this.data.text;
-        const pattern = this.data.pattern;
-        const n = text.length;
-        const m = pattern.length;
-        
+        const { text, pattern } = this.data;
+        const n = text.length, m = pattern.length;
+        this.addLog(`Naive search for "${pattern.join('')}" in "${text.join('')}"`, 'normal');
         for (let i = 0; i <= n - m && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             this.data.textIndex = i;
             let j;
-            
             for (j = 0; j < m && this.isRunning; j++) {
-                if (!this.isRunning) return;
-                
                 this.data.patternIndex = j;
                 this.compareIndices = [i + j];
                 this.stats.comparisons++;
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(200);
-                
-                if (text[i + j] !== pattern[j]) {
-                    break;
+                if (text[i + j] !== pattern[j]) break;
+            }
+            if (j === m) { this.foundIndex = i; this.draw(); this.addLog(`Found at index ${i}!`, 'success'); return; }
+        }
+        this.addLog('Not found', 'error');
+    }
+
+    async kmpSearch() {
+        const { text, pattern } = this.data;
+        const n = text.length, m = pattern.length;
+        const lps = Array(m).fill(0);
+        let len = 0, i = 1;
+        this.addLog(`KMP: computing LPS for "${pattern.join('')}"`, 'normal');
+        while (i < m && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            if (pattern[i] === pattern[len]) { lps[i++] = ++len; }
+            else if (len) { len = lps[len - 1]; }
+            else { lps[i++] = 0; }
+            this.stats.operations++;
+            this.updateStatsDisplay();
+            this.draw();
+            await this.sleep(150);
+        }
+        i = 0; let j = 0;
+        this.addLog('KMP: searching', 'normal');
+        while (i < n && this.isRunning) {
+            if (this.isPaused) await this.waitForResume();
+            this.data.textIndex = i;
+            this.data.patternIndex = j;
+            if (pattern[j] === text[i]) {
+                i++; j++;
+                this.stats.comparisons++;
+                this.updateStatsDisplay();
+                this.draw();
+                await this.sleep(200);
+                if (j === m) { this.foundIndex = i - j; this.draw(); this.addLog(`Found at ${i - j}!`, 'success'); return; }
+            } else {
+                if (j) j = lps[j - 1];
+                else i++;
+            }
+        }
+        this.addLog('Not found', 'error');
+    }
+
+    async rabinKarpSearch() {
+        const { text, pattern } = this.data;
+        const n = text.length, m = pattern.length;
+        const prime = 101, d = 256;
+        let pH = 0, tH = 0, h = 1;
+        for (let i = 0; i < m - 1; i++) h = (h * d) % prime;
+        for (let i = 0; i < m; i++) {
+            pH = (d * pH + pattern[i].charCodeAt(0)) % prime;
+            tH = (d * tH + text[i].charCodeAt(0)) % prime;
+        }
+        this.addLog(`Rabin-Karp for "${pattern.join('')}"`, 'normal');
+        for (let i = 0; i <= n - m && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            this.data.textIndex = i;
+            if (pH === tH) {
+                let match = true;
+                for (let j = 0; j < m && this.isRunning; j++) {
+                    this.data.patternIndex = j;
+                    this.compareIndices = [i + j];
+                    this.stats.comparisons++;
+                    this.updateStatsDisplay();
+                    this.draw();
+                    await this.sleep(150);
+                    if (text[i + j] !== pattern[j]) { match = false; break; }
+                }
+                if (match) { this.foundIndex = i; this.draw(); this.addLog(`Found at ${i}!`, 'success'); return; }
+            }
+            if (i < n - m) {
+                tH = (d * (tH - text[i].charCodeAt(0) * h) + text[i + m].charCodeAt(0)) % prime;
+                if (tH < 0) tH += prime;
+            }
+            this.stats.operations++;
+            this.updateStatsDisplay();
+            this.draw();
+            await this.sleep(100);
+        }
+        this.addLog('Not found', 'error');
+    }
+
+    async zAlgorithmSearch() {
+        const text = this.data.text.join(''), pattern = this.data.pattern.join('');
+        const combined = pattern + '$' + text;
+        const n = combined.length, m = pattern.length;
+        const z = Array(n).fill(0);
+        let l = 0, r = 0;
+        this.addLog(`Z-Algorithm for "${pattern}"`, 'normal');
+        for (let i = 1; i < n && this.isRunning; i++) {
+            if (this.isPaused) await this.waitForResume();
+            if (i > r) {
+                l = r = i;
+                while (r < n && combined[r - l] === combined[r]) { r++; this.stats.comparisons++; }
+                z[i] = r - l;
+            } else {
+                const k = i - l;
+                if (z[k] < r - i + 1) z[i] = z[k];
+                else {
+                    l = i;
+                    while (r < n && combined[r - l] === combined[r]) { r++; this.stats.comparisons++; }
+                    z[i] = r - l;
                 }
             }
-            
-            if (j === m) {
-                this.foundIndex = i;
+            if (z[i] === m) {
+                this.foundIndex = i - m - 1;
+                this.addLog(`Found at ${this.foundIndex}!`, 'success');
+                this.updateStatsDisplay();
                 this.draw();
                 await this.sleep(500);
                 return;
             }
-        }
-    }
-
-    async kmpSearch() {
-        const text = this.data.text;
-        const pattern = this.data.pattern;
-        const n = text.length;
-        const m = pattern.length;
-        
-        // Compute LPS array
-        const lps = Array(m).fill(0);
-        let len = 0, i = 1;
-        
-        while (i < m && this.isRunning) {
-            if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            if (pattern[i] === pattern[len]) {
-                len++;
-                lps[i] = len;
-                i++;
-            } else {
-                if (len !== 0) {
-                    len = lps[len - 1];
-                } else {
-                    lps[i] = 0;
-                    i++;
-                }
-            }
             this.stats.operations++;
-            this.draw();
-            await this.sleep(150);
-        }
-        
-        // Search using LPS
-        i = 0;
-        let j = 0;
-        
-        while (i < n && this.isRunning) {
-            if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            this.data.textIndex = i;
-            this.data.patternIndex = j;
-            
-            if (pattern[j] === text[i]) {
-                i++;
-                j++;
-                this.stats.comparisons++;
-                this.draw();
-                await this.sleep(200);
-                
-                if (j === m) {
-                    this.foundIndex = i - j;
-                    this.draw();
-                    await this.sleep(500);
-                    return;
-                }
-            } else {
-                if (j !== 0) {
-                    j = lps[j - 1];
-                } else {
-                    i++;
-                }
-            }
-        }
-    }
-
-    async rabinKarpSearch() {
-        const text = this.data.text;
-        const pattern = this.data.pattern;
-        const n = text.length;
-        const m = pattern.length;
-        const prime = 101;
-        const d = 256;
-        
-        let patternHash = 0, textHash = 0, h = 1;
-        
-        for (let i = 0; i < m - 1; i++) {
-            h = (h * d) % prime;
-        }
-        
-        for (let i = 0; i < m; i++) {
-            patternHash = (d * patternHash + pattern[i].charCodeAt(0)) % prime;
-            textHash = (d * textHash + text[i].charCodeAt(0)) % prime;
-        }
-        
-        for (let i = 0; i <= n - m && this.isRunning; i++) {
-            if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            this.data.textIndex = i;
-            
-            if (patternHash === textHash) {
-                let match = true;
-                for (let j = 0; j < m; j++) {
-                    if (!this.isRunning) return;
-                    
-                    this.data.patternIndex = j;
-                    this.compareIndices = [i + j];
-                    this.stats.comparisons++;
-                    this.draw();
-                    await this.sleep(150);
-                    
-                    if (text[i + j] !== pattern[j]) {
-                        match = false;
-                        break;
-                    }
-                }
-                
-                if (match) {
-                    this.foundIndex = i;
-                    this.draw();
-                    await this.sleep(500);
-                    return;
-                }
-            }
-            
-            if (i < n - m) {
-                textHash = (d * (textHash - text[i].charCodeAt(0) * h) + text[i + m].charCodeAt(0)) % prime;
-                if (textHash < 0) textHash += prime;
-            }
-            
-            this.stats.operations++;
+            this.updateStatsDisplay();
             this.draw();
             await this.sleep(100);
         }
-    }
-
-    async zAlgorithmSearch() {
-        const text = this.data.text.join('');
-        const pattern = this.data.pattern.join('');
-        const combined = pattern + '$' + text;
-        const n = combined.length;
-        const m = pattern.length;
-        const z = Array(n).fill(0);
-        
-        let l = 0, r = 0;
-        
-        for (let i = 1; i < n && this.isRunning; i++) {
-            if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
-            if (i > r) {
-                l = r = i;
-                while (r < n && combined[r - l] === combined[r]) {
-                    if (!this.isRunning) return;
-                    r++;
-                    this.stats.comparisons++;
-                }
-                z[i] = r - l;
-                if (z[i] === m) {
-                    this.foundIndex = i - m - 1;
-                    this.draw();
-                    await this.sleep(500);
-                    return;
-                }
-            } else {
-                const k = i - l;
-                if (z[k] < r - i + 1) {
-                    z[i] = z[k];
-                } else {
-                    l = i;
-                    while (r < n && combined[r - l] === combined[r]) {
-                        if (!this.isRunning) return;
-                        r++;
-                        this.stats.comparisons++;
-                    }
-                    z[i] = r - l;
-                    if (z[i] === m) {
-                        this.foundIndex = i - m - 1;
-                        this.draw();
-                        await this.sleep(500);
-                        return;
-                    }
-                }
-            }
-            
-            this.stats.operations++;
-            this.draw();
-            await this.sleep(100);
-        }
+        this.addLog('Not found', 'error');
     }
 
     async manacherSearch() {
@@ -2572,69 +1909,36 @@ function computeLPS(pattern) {
         const transformed = '#' + text.split('').join('#') + '#';
         const n = transformed.length;
         const p = Array(n).fill(0);
-        
         let center = 0, right = 0;
-        
+        this.addLog(`Manacher's on "${text}"`, 'normal');
         for (let i = 0; i < n && this.isRunning; i++) {
             if (this.isPaused) await this.waitForResume();
-            if (!this.isRunning) return;
-            
             const mirror = 2 * center - i;
-            
-            if (i < right) {
-                p[i] = Math.min(right - i, p[mirror]);
-            }
-            
+            if (i < right) p[i] = Math.min(right - i, p[mirror]);
             let a = i + p[i] + 1, b = i - p[i] - 1;
-            while (a < n && b >= 0 && transformed[a] === transformed[b]) {
-                if (!this.isRunning) return;
-                p[i]++;
-                a++;
-                b--;
-                this.stats.comparisons++;
-            }
-            
-            if (i + p[i] > right) {
-                center = i;
-                right = i + p[i];
-            }
-            
+            while (a < n && b >= 0 && transformed[a] === transformed[b]) { p[i]++; a++; b--; this.stats.comparisons++; }
+            if (i + p[i] > right) { center = i; right = i + p[i]; }
             this.stats.operations++;
+            this.updateStatsDisplay();
             this.draw();
             await this.sleep(100);
         }
-        
-        // Find the longest palindrome
-        let maxLen = 0, centerIndex = 0;
-        for (let i = 0; i < n; i++) {
-            if (p[i] > maxLen) {
-                maxLen = p[i];
-                centerIndex = i;
-            }
-        }
-        
-        this.foundIndex = Math.floor((centerIndex - maxLen) / 2);
+        let maxLen = 0, ci = 0;
+        for (let i = 0; i < n; i++) if (p[i] > maxLen) { maxLen = p[i]; ci = i; }
+        this.foundIndex = Math.floor((ci - maxLen) / 2);
+        this.addLog(`Longest palindrome length: ${maxLen}`, 'success');
         this.draw();
         await this.sleep(500);
     }
 
-    waitForResume() {
-        return new Promise(resolve => {
-            const check = () => {
-                if (!this.isPaused) {
-                    resolve();
-                } else {
-                    setTimeout(check, 100);
-                }
-            };
-            check();
-        });
-    }
+    // ─── Drawing ──────────────────────────────────────────────────────────────
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        switch(this.algorithmCategory) {
+
+        if (!this.currentAlgorithm) return;
+
+        switch (this.algorithmCategory) {
             case 'sorting':
             case 'searching':
                 this.drawArray();
@@ -2646,52 +1950,45 @@ function computeLPS(pattern) {
                 this.drawTree();
                 break;
             case 'dynamic':
-                if (this.fibSequence) {
-                    this.drawFibonacci();
-                } else if (this.lcsData) {
-                    this.drawLCS();
-                } else if (this.knapsackData) {
-                    this.drawKnapsack();
-                } else if (this.coinData) {
-                    this.drawCoinChange();
-                } else if (this.editData) {
-                    this.drawEditDistance();
-                } else if (this.matrixData) {
-                    this.drawMatrixChain();
-                } else {
-                    this.drawArray();
+                if (this.fibSequence) this.drawFibonacci();
+                else if (this.lcsData) this.drawLCS();
+                else if (this.knapsackData) this.drawKnapsack();
+                else if (this.coinData) this.drawCoinChange();
+                else if (this.editData) this.drawEditDistance();
+                else if (this.matrixData) this.drawMatrixChain();
+                else {
+                    this.ctx.fillStyle = '#888';
+                    this.ctx.font = '18px monospace';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('Press Start to begin visualization', this.canvas.width / 2, this.canvas.height / 2);
                 }
                 break;
             case 'string':
                 this.drawString();
                 break;
         }
+
+        this.updateStatsDisplay();
     }
 
     drawArray() {
         if (!this.data || !Array.isArray(this.data)) return;
-        
         const barWidth = (this.canvas.width - 40) / this.data.length;
         const maxHeight = this.canvas.height - 60;
         const showLabels = this.data.length <= 20;
-    
+
         this.data.forEach((value, index) => {
             const height = (value / 320) * maxHeight;
             const x = 20 + index * barWidth;
             const y = this.canvas.height - 30 - height;
-    
-            if (this.foundIndex === index) {
-                this.ctx.fillStyle = '#4caf50';
-            } else if (this.highlightIndices && this.highlightIndices.includes(index)) {
-                this.ctx.fillStyle = '#ff5722';
-            } else if (this.compareIndices && this.compareIndices.includes(index)) {
-                this.ctx.fillStyle = '#ff9800';
-            } else {
-                this.ctx.fillStyle = '#667eea';
-            }
-    
+
+            if (this.foundIndex === index) this.ctx.fillStyle = '#4caf50';
+            else if (this.highlightIndices && this.highlightIndices.includes(index)) this.ctx.fillStyle = '#ff5722';
+            else if (this.compareIndices && this.compareIndices.includes(index)) this.ctx.fillStyle = '#ff9800';
+            else this.ctx.fillStyle = '#667eea';
+
             this.ctx.fillRect(x, y, Math.max(barWidth - 2, 4), height);
-    
+
             if (showLabels && barWidth >= 18) {
                 this.ctx.fillStyle = '#000000';
                 this.ctx.font = 'bold 11px Arial';
@@ -2703,303 +2000,194 @@ function computeLPS(pattern) {
 
     drawGraph() {
         if (!this.graph || !this.graph.nodes || !this.graph.edges) return;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw edges first (behind nodes)
+
+        // Edges
         this.graph.edges.forEach(edge => {
-            const fromNode = this.graph.nodes[edge.from];
-            const toNode = this.graph.nodes[edge.to];
-            
+            const from = this.graph.nodes[edge.from], to = this.graph.nodes[edge.to];
             this.ctx.beginPath();
-            this.ctx.moveTo(fromNode.x, fromNode.y);
-            this.ctx.lineTo(toNode.x, toNode.y);
-            
-            if (this.currentEdge && 
-                this.currentEdge.from === edge.from && 
-                this.currentEdge.to === edge.to) {
-                this.ctx.strokeStyle = '#ff5722';
-                this.ctx.lineWidth = 4;
-            } else {
-                this.ctx.strokeStyle = '#999999';
-                this.ctx.lineWidth = 2;
-            }
-            
+            this.ctx.moveTo(from.x, from.y);
+            this.ctx.lineTo(to.x, to.y);
+            const isCurrent = this.currentEdge && this.currentEdge.from === edge.from && this.currentEdge.to === edge.to;
+            this.ctx.strokeStyle = isCurrent ? '#ff5722' : '#999';
+            this.ctx.lineWidth = isCurrent ? 4 : 2;
             this.ctx.stroke();
-            
-            // Draw weight with background
-            const midX = (fromNode.x + toNode.x) / 2;
-            const midY = (fromNode.y + toNode.y) / 2;
-            
-            // Weight background circle
+
+            const midX = (from.x + to.x) / 2, midY = (from.y + to.y) / 2;
             this.ctx.beginPath();
             this.ctx.arc(midX, midY, 12, 0, 2 * Math.PI);
             this.ctx.fillStyle = 'white';
             this.ctx.fill();
-            
-            // Weight text
-            this.ctx.fillStyle = '#000000';
+            this.ctx.fillStyle = '#000';
             this.ctx.font = 'bold 11px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(edge.weight.toString(), midX, midY);
         });
-        
-        // Draw nodes on top - mark start (node 0) and end (last node)
+
+        // Nodes
         this.graph.nodes.forEach(node => {
             this.ctx.beginPath();
             this.ctx.arc(node.x, node.y, 24, 0, 2 * Math.PI);
-            
-            let fillColor = '#667eea'; // Default blue
-            
-            // Start node (green)
-            if (node.id === 0) {
-                fillColor = '#4caf50';
-            }
-            // End node (red) - last node
-            else if (node.id === this.graph.nodes.length - 1) {
-                fillColor = '#f44336';
-            }
-            // Currently being processed (orange)
-            else if (this.currentNode === node.id) {
-                fillColor = '#ff5722';
-            }
-            // Visited nodes (green)
-            else if (node.visited) {
-                fillColor = '#4caf50';
-            }
-            
-            this.ctx.fillStyle = fillColor;
+            let fill = '#667eea';
+            if (node.id === 0) fill = '#4caf50';
+            else if (node.id === this.graph.nodes.length - 1) fill = '#f44336';
+            else if (this.currentNode === node.id) fill = '#ff5722';
+            else if (node.visited) fill = '#81c784';
+            this.ctx.fillStyle = fill;
             this.ctx.fill();
-            this.ctx.strokeStyle = '#333333';
+            this.ctx.strokeStyle = '#333';
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
-            
-            // Node ID with black text for better contrast
-            this.ctx.fillStyle = '#000000';
-            this.ctx.font = 'bold 16px Arial';
+
+            this.ctx.fillStyle = node.id === 0 || node.id === this.graph.nodes.length - 1 ? '#fff' : '#000';
+            this.ctx.font = 'bold 15px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(node.id.toString(), node.x, node.y);
-            
-            // Mark Start and End nodes
-            if (node.id === 0) {
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = 'bold 10px Arial';
-                this.ctx.fillText('S', node.x - 8, node.y - 8);
-            } else if (node.id === this.graph.nodes.length - 1) {
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = 'bold 10px Arial';
-                this.ctx.fillText('E', node.x - 8, node.y - 8);
+
+            // Distance label for weighted algorithms
+            if (node.distance !== undefined && node.distance !== Infinity) {
+                this.ctx.fillStyle = '#1976d2';
+                this.ctx.font = '10px Arial';
+                this.ctx.fillText(`d=${node.distance}`, node.x, node.y + 32);
             }
         });
     }
 
     drawTree() {
-        if (!this.tree || !this.tree.nodes || !this.tree.edges) return;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw edges first (behind nodes)
-        this.tree.edges.forEach(edge => {
-            const fromNode = this.tree.nodes[edge.from];
-            const toNode = this.tree.nodes[edge.to];
-            
+        const nodes = this.bstNodes || this.avlNodes || this.rbNodes || this.treeNodes || (this.tree && this.tree.nodes);
+        const edges = this.bstEdges || this.avlEdges || this.rbEdges || this.treeEdges || (this.tree && this.tree.edges);
+        if (!nodes || !edges) return;
+
+        edges.forEach(edge => {
+            const from = nodes[edge.from], to = nodes[edge.to];
+            if (!from || !to) return;
             this.ctx.beginPath();
-            this.ctx.moveTo(fromNode.x, fromNode.y);
-            this.ctx.lineTo(toNode.x, toNode.y);
+            this.ctx.moveTo(from.x, from.y);
+            this.ctx.lineTo(to.x, to.y);
             this.ctx.strokeStyle = '#90a4ae';
-            this.ctx.lineWidth = 3;
+            this.ctx.lineWidth = 2;
             this.ctx.stroke();
         });
-        
-        // Draw nodes on top
-        this.tree.nodes.forEach(node => {
+
+        nodes.forEach((node, idx) => {
             this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, 24, 0, 2 * Math.PI);
-            
-            if (node.visited) {
-                this.ctx.fillStyle = '#4caf50';
-            } else if (this.currentNode && this.currentNode === node.id) {
-                this.ctx.fillStyle = '#ff5722';
-            } else {
-                this.ctx.fillStyle = '#667eea';
-            }
-            
+            this.ctx.arc(node.x, node.y, 22, 0, 2 * Math.PI);
+            let fill = '#667eea';
+            if (node.color === 'red') fill = '#ef5350';
+            else if (node.color === 'black') fill = '#424242';
+            else if (node.visited) fill = '#4caf50';
+            if (this.currentNode === (node.id !== undefined ? node.id : idx)) fill = '#ff5722';
+            this.ctx.fillStyle = fill;
             this.ctx.fill();
-            this.ctx.strokeStyle = '#333333';
-            this.ctx.lineWidth = 3;
+            this.ctx.strokeStyle = '#333';
+            this.ctx.lineWidth = 2;
             this.ctx.stroke();
-            
-            // Node value with black text for better contrast
-            this.ctx.fillStyle = '#000000';
-            this.ctx.font = 'bold 16px Arial';
+
+            this.ctx.fillStyle = node.color === 'red' || node.color === 'black' ? '#fff' : '#000';
+            this.ctx.font = 'bold 13px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(node.value.toString(), node.x, node.y);
+            this.ctx.fillText(node.value !== undefined ? node.value : (node.char || ''), node.x, node.y);
         });
     }
 
     drawFibonacci() {
-        const boxWidth = 70;
-        const boxHeight = 50;
-        const startX = 30;
-        const startY = this.canvas.height / 2 - boxHeight / 2;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+        if (!this.fibSequence) return;
+        const boxW = 65, boxH = 48;
+        const startX = 20, startY = this.canvas.height / 2 - boxH / 2;
+
         this.fibSequence.forEach((value, index) => {
-            const x = startX + index * (boxWidth + 15);
-            const y = startY;
-            
-            // Box with solid color
-            this.ctx.fillStyle = this.highlightIndices && this.highlightIndices.includes(index) 
-                ? '#ff5722' 
-                : '#667eea';
-            
-            this.ctx.fillRect(x, y, boxWidth, boxHeight);
-            
-            // Border
-            this.ctx.strokeStyle = '#333333';
+            const x = startX + index * (boxW + 12);
+            const isHighlighted = this.highlightIndices && this.highlightIndices.includes(index);
+            this.ctx.fillStyle = isHighlighted ? '#ff5722' : '#667eea';
+            this.ctx.fillRect(x, startY, boxW, boxH);
+            this.ctx.strokeStyle = '#333';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, boxWidth, boxHeight);
-            
-            // Value text with black color for better contrast
-            this.ctx.fillStyle = '#000000';
-            this.ctx.font = 'bold 18px Arial';
+            this.ctx.strokeRect(x, startY, boxW, boxH);
+
+            this.ctx.fillStyle = '#000';
+            this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(value.toString(), x + boxWidth / 2, y + boxHeight / 2);
-            
-            // Index label
-            this.ctx.fillStyle = '#424242';
-            this.ctx.font = '12px Arial';
-            this.ctx.fillText(`F(${index})`, x + boxWidth / 2, y + boxHeight + 25);
+            this.ctx.fillText(value.toString(), x + boxW / 2, startY + boxH / 2);
+
+            this.ctx.fillStyle = '#555';
+            this.ctx.font = '11px Arial';
+            this.ctx.fillText(`F(${index})`, x + boxW / 2, startY + boxH + 20);
         });
     }
 
     drawLCS() {
         if (!this.lcsData) return;
         const { s1, s2, dp, currentI, currentJ } = this.lcsData;
-        const cellSize = 35;
-        const offsetX = 60;
-        const offsetY = 60;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw headers
+        const cs = 34, ox = 65, oy = 55;
         this.ctx.fillStyle = '#1976d2';
         this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('LCS DP Table', this.canvas.width / 2, 25);
-        
-        // Draw s2 (columns)
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '12px Arial';
+        this.ctx.fillText('LCS Table', this.canvas.width / 2, 25);
         for (let j = 0; j <= s2.length; j++) {
-            const x = offsetX + j * cellSize;
-            this.ctx.fillText(j === 0 ? '' : s2[j - 1], x + cellSize / 2, offsetY - 10);
+            this.ctx.fillStyle = '#333';
+            this.ctx.font = 'bold 13px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(j === 0 ? '' : s2[j - 1], ox + j * cs + cs / 2, oy - 10);
         }
-        
-        // Draw s1 (rows) and DP table
         for (let i = 0; i <= s1.length; i++) {
-            // Row header
             if (i > 0) {
-                this.ctx.fillStyle = '#000000';
-                this.ctx.font = '12px Arial';
-                this.ctx.fillText(s1[i - 1], offsetX - 20, offsetY + i * cellSize + cellSize / 2);
+                this.ctx.fillStyle = '#333';
+                this.ctx.font = 'bold 13px Arial';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(s1[i - 1], ox - 10, oy + i * cs + cs / 2 + 4);
             }
-            
             for (let j = 0; j <= s2.length; j++) {
-                const x = offsetX + j * cellSize;
-                const y = offsetY + i * cellSize;
-                
-                // Cell background
-                if (i === currentI && j === currentJ) {
-                    this.ctx.fillStyle = '#ff5722'; // Current cell
-                } else if (i === currentI - 1 || j === currentJ - 1) {
-                    this.ctx.fillStyle = '#ffe0b2'; // Referenced cells
-                } else {
-                    this.ctx.fillStyle = i === 0 || j === 0 ? '#e3f2fd' : '#ffffff';
-                }
-                
-                this.ctx.fillRect(x, y, cellSize, cellSize);
-                this.ctx.strokeStyle = '#bdbdbd';
+                const x = ox + j * cs, y = oy + i * cs;
+                this.ctx.fillStyle = i === currentI && j === currentJ ? '#ff5722' : (i === 0 || j === 0 ? '#e3f2fd' : '#fff');
+                this.ctx.fillRect(x, y, cs, cs);
+                this.ctx.strokeStyle = '#bbb';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(x, y, cellSize, cellSize);
-                
-                // Cell value
-                this.ctx.fillStyle = '#000000';
+                this.ctx.strokeRect(x, y, cs, cs);
+                this.ctx.fillStyle = '#000';
                 this.ctx.font = 'bold 12px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(dp[i][j].toString(), x + cellSize / 2, y + cellSize / 2);
+                this.ctx.fillText(dp[i][j].toString(), x + cs / 2, y + cs / 2);
             }
         }
-        
-        // Legend
-        this.ctx.fillStyle = '#ff5722';
-        this.ctx.fillRect(offsetX, offsetY + (s1.length + 1) * cellSize + 15, 20, 20);
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '11px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText('= Current', offsetX + 25, offsetY + (s1.length + 1) * cellSize + 30);
     }
 
     drawKnapsack() {
         if (!this.knapsackData) return;
         const { weights, values, capacity, dp, currentI, currentW } = this.knapsackData;
-        const cellSize = 30;
-        const offsetX = 80;
-        const offsetY = 70;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Title
+        const cs = 28, ox = 100, oy = 65;
         this.ctx.fillStyle = '#1976d2';
         this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('0/1 Knapsack DP Table', this.canvas.width / 2, 25);
-        
-        // Draw capacity (columns)
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '10px Arial';
+        this.ctx.fillText('Knapsack DP', this.canvas.width / 2, 25);
         for (let w = 0; w <= capacity; w++) {
-            const x = offsetX + w * cellSize;
-            this.ctx.fillText(w.toString(), x + cellSize / 2, offsetY - 10);
+            this.ctx.fillStyle = '#333';
+            this.ctx.font = '10px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(w.toString(), ox + w * cs + cs / 2, oy - 10);
         }
-        
-        // Draw items (rows) and DP table
         for (let i = 0; i <= weights.length; i++) {
-            // Row header
             if (i > 0) {
-                this.ctx.fillStyle = '#000000';
-                this.ctx.font = '10px Arial';
-                this.ctx.fillText(`Item${i}\n(w:${weights[i-1]},v:${values[i-1]})`, offsetX - 70, offsetY + i * cellSize + cellSize / 2);
+                this.ctx.fillStyle = '#333';
+                this.ctx.font = '9px Arial';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(`i${i}(w${weights[i-1]},v${values[i-1]})`, ox - 5, oy + i * cs + cs / 2 + 3);
             }
-            
             for (let w = 0; w <= capacity; w++) {
-                const x = offsetX + w * cellSize;
-                const y = offsetY + i * cellSize;
-                
-                // Cell background
-                if (i === currentI && w === currentW) {
-                    this.ctx.fillStyle = '#ff5722';
-                } else {
-                    this.ctx.fillStyle = i === 0 ? '#e3f2fd' : '#ffffff';
-                }
-                
-                this.ctx.fillRect(x, y, cellSize, cellSize);
-                this.ctx.strokeStyle = '#bdbdbd';
+                const x = ox + w * cs, y = oy + i * cs;
+                this.ctx.fillStyle = i === currentI && w === currentW ? '#ff5722' : (i === 0 ? '#e3f2fd' : '#fff');
+                this.ctx.fillRect(x, y, cs, cs);
+                this.ctx.strokeStyle = '#bbb';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(x, y, cellSize, cellSize);
-                
-                // Cell value
-                this.ctx.fillStyle = '#000000';
+                this.ctx.strokeRect(x, y, cs, cs);
+                this.ctx.fillStyle = '#000';
                 this.ctx.font = 'bold 10px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(dp[i][w].toString(), x + cellSize / 2, y + cellSize / 2);
+                this.ctx.fillText(dp[i][w].toString(), x + cs / 2, y + cs / 2);
             }
         }
     }
@@ -3007,302 +2195,208 @@ function computeLPS(pattern) {
     drawCoinChange() {
         if (!this.coinData) return;
         const { coins, amount, dp, currentCoin, currentAmt } = this.coinData;
-        const cellSize = 35;
-        const offsetX = 60;
-        const offsetY = 70;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Title
+        const cs = 33, ox = 55, oy = 65;
         this.ctx.fillStyle = '#1976d2';
         this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Coin Change DP', this.canvas.width / 2, 25);
-        
-        // Draw amounts (columns)
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '10px Arial';
         for (let a = 0; a <= amount; a++) {
-            const x = offsetX + a * cellSize;
-            this.ctx.fillText(a.toString(), x + cellSize / 2, offsetY - 10);
+            this.ctx.fillStyle = '#333';
+            this.ctx.font = '10px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(a.toString(), ox + a * cs + cs / 2, oy - 10);
         }
-        
-        // Draw coins (rows) and DP array
         coins.forEach((coin, idx) => {
-            const rowY = offsetY + idx * cellSize;
-            
-            // Row header
-            this.ctx.fillStyle = '#000000';
+            const rowY = oy + idx * cs;
+            this.ctx.fillStyle = '#333';
             this.ctx.font = '11px Arial';
             this.ctx.textAlign = 'right';
-            this.ctx.fillText(`Coin ${coin}`, offsetX - 10, rowY + cellSize / 2);
-            
-            // DP cells for this coin
+            this.ctx.fillText(`c=${coin}`, ox - 8, rowY + cs / 2 + 4);
             for (let a = 0; a <= amount; a++) {
-                const x = offsetX + a * cellSize;
-                
-                // Cell background
-                if (currentCoin === coin && currentAmt === a) {
-                    this.ctx.fillStyle = '#ff5722';
-                } else {
-                    this.ctx.fillStyle = '#ffffff';
-                }
-                
-                this.ctx.fillRect(x, rowY, cellSize, cellSize);
-                this.ctx.strokeStyle = '#bdbdbd';
+                const x = ox + a * cs;
+                this.ctx.fillStyle = currentCoin === coin && currentAmt === a ? '#ff5722' : '#fff';
+                this.ctx.fillRect(x, rowY, cs, cs);
+                this.ctx.strokeStyle = '#bbb';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(x, rowY, cellSize, cellSize);
-                
-                // Cell value
-                this.ctx.fillStyle = '#000000';
+                this.ctx.strokeRect(x, rowY, cs, cs);
+                this.ctx.fillStyle = '#000';
                 this.ctx.font = 'bold 11px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
-                if (dp[a] !== Infinity) {
-                    this.ctx.fillText(dp[a].toString(), x + cellSize / 2, rowY + cellSize / 2);
-                } else {
-                    this.ctx.fillText('∞', x + cellSize / 2, rowY + cellSize / 2);
-                }
+                this.ctx.fillText(dp[a] !== Infinity ? dp[a] : '∞', x + cs / 2, rowY + cs / 2);
             }
         });
-        
-        // Final result row
-        const finalY = offsetY + coins.length * cellSize;
+        const ry = oy + coins.length * cs + 10;
         this.ctx.fillStyle = '#4caf50';
-        this.ctx.fillRect(offsetX, finalY, (amount + 1) * cellSize, cellSize);
-        this.ctx.strokeStyle = '#2e7d32';
-        this.ctx.strokeRect(offsetX, finalY, (amount + 1) * cellSize, cellSize);
-        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(ox, ry, (amount + 1) * cs, cs);
+        this.ctx.fillStyle = '#fff';
         this.ctx.font = 'bold 12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        const result = dp[amount] !== Infinity ? dp[amount].toString() : 'Impossible';
-        this.ctx.fillText(`Result: ${result}`, offsetX + amount * cellSize / 2, finalY + cellSize / 2);
+        this.ctx.fillText(`Result: ${dp[amount] !== Infinity ? dp[amount] : 'Impossible'}`, ox + (amount + 1) * cs / 2, ry + cs / 2);
     }
 
     drawEditDistance() {
         if (!this.editData) return;
         const { s1, s2, dp, currentI, currentJ } = this.editData;
-        const cellSize = 32;
-        const offsetX = 70;
-        const offsetY = 60;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Title
+        const cs = 30, ox = 60, oy = 55;
         this.ctx.fillStyle = '#1976d2';
         this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('Edit Distance (Levenshtein)', this.canvas.width / 2, 25);
-        
-        // Draw s2 (columns)
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '11px Arial';
+        this.ctx.fillText('Edit Distance', this.canvas.width / 2, 25);
         for (let j = 0; j <= s2.length; j++) {
-            const x = offsetX + j * cellSize;
-            this.ctx.fillText(j === 0 ? '' : s2[j - 1], x + cellSize / 2, offsetY - 10);
+            this.ctx.fillStyle = '#333';
+            this.ctx.font = '11px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(j === 0 ? '' : s2[j - 1], ox + j * cs + cs / 2, oy - 10);
         }
-        
-        // Draw s1 (rows) and DP table
         for (let i = 0; i <= s1.length; i++) {
-            // Row header
             if (i > 0) {
-                this.ctx.fillStyle = '#000000';
+                this.ctx.fillStyle = '#333';
                 this.ctx.font = '11px Arial';
                 this.ctx.textAlign = 'right';
-                this.ctx.fillText(s1[i - 1], offsetX - 15, offsetY + i * cellSize + cellSize / 2);
+                this.ctx.fillText(s1[i - 1], ox - 8, oy + i * cs + cs / 2 + 4);
             }
-            
             for (let j = 0; j <= s2.length; j++) {
-                const x = offsetX + j * cellSize;
-                const y = offsetY + i * cellSize;
-                
-                // Cell background
-                if (i === currentI && j === currentJ) {
-                    this.ctx.fillStyle = '#ff5722';
-                } else {
-                    this.ctx.fillStyle = i === 0 || j === 0 ? '#e3f2fd' : '#ffffff';
-                }
-                
-                this.ctx.fillRect(x, y, cellSize, cellSize);
-                this.ctx.strokeStyle = '#bdbdbd';
+                const x = ox + j * cs, y = oy + i * cs;
+                this.ctx.fillStyle = i === currentI && j === currentJ ? '#ff5722' : (i === 0 || j === 0 ? '#e3f2fd' : '#fff');
+                this.ctx.fillRect(x, y, cs, cs);
+                this.ctx.strokeStyle = '#bbb';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(x, y, cellSize, cellSize);
-                
-                // Cell value
-                this.ctx.fillStyle = '#000000';
+                this.ctx.strokeRect(x, y, cs, cs);
+                this.ctx.fillStyle = '#000';
                 this.ctx.font = 'bold 11px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(dp[i][j].toString(), x + cellSize / 2, y + cellSize / 2);
+                this.ctx.fillText(dp[i][j].toString(), x + cs / 2, y + cs / 2);
             }
         }
-        
-        // Result
-        const finalDist = dp[s1.length][s2.length];
+        const dist = dp[s1.length] && dp[s1.length][s2.length] !== undefined ? dp[s1.length][s2.length] : '—';
+        const ry = oy + (s1.length + 1) * cs + 12;
         this.ctx.fillStyle = '#4caf50';
-        this.ctx.fillRect(offsetX, offsetY + (s1.length + 1) * cellSize + 15, 150, 30);
-        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(ox, ry, 160, 28);
+        this.ctx.fillStyle = '#fff';
         this.ctx.font = 'bold 13px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(`Distance: ${finalDist}`, offsetX + 75, offsetY + (s1.length + 1) * cellSize + 30);
+        this.ctx.fillText(`Distance: ${dist}`, ox + 80, ry + 14);
     }
 
     drawMatrixChain() {
         if (!this.matrixData) return;
         const { dims, dp, currentLen, currentI, currentJ } = this.matrixData;
-        const n = dims.length - 1;
-        const cellSize = 40;
-        const offsetX = 50;
-        const offsetY = 50;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Title
+        const n = dims.length - 1, cs = 42, ox = 50, oy = 55;
         this.ctx.fillStyle = '#1976d2';
         this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('Matrix Chain Multiplication', this.canvas.width / 2, 25);
-        
-        // Draw dimensions info
-        this.ctx.fillStyle = '#424242';
+        this.ctx.fillText('Matrix Chain DP', this.canvas.width / 2, 25);
+        this.ctx.fillStyle = '#555';
         this.ctx.font = '11px Arial';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(`Dimensions: [${dims.join('x')}]`, offsetX, offsetY - 20);
-        
-        // Draw upper triangular DP table
+        this.ctx.fillText(`Matrices: [${dims.slice(0,-1).map((d,i)=>`${d}×${dims[i+1]}`).join(', ')}]`, ox, oy - 20);
         for (let i = 1; i <= n; i++) {
             for (let j = i; j <= n; j++) {
-                const x = offsetX + (j - 1) * cellSize;
-                const y = offsetY + (i - 1) * cellSize;
-                
-                // Cell background
-                if (i === currentI && j === currentJ) {
-                    this.ctx.fillStyle = '#ff5722';
-                } else if (j - i + 1 === currentLen) {
-                    this.ctx.fillStyle = '#ffe0b2';
-                } else {
-                    this.ctx.fillStyle = '#ffffff';
-                }
-                
-                this.ctx.fillRect(x, y, cellSize, cellSize);
-                this.ctx.strokeStyle = '#bdbdbd';
+                const x = ox + (j - 1) * cs, y = oy + (i - 1) * cs;
+                const isActive = i === currentI && j === currentJ;
+                const isCurrentLen = j - i + 1 === currentLen;
+                this.ctx.fillStyle = isActive ? '#ff5722' : isCurrentLen ? '#ffe0b2' : '#fff';
+                this.ctx.fillRect(x, y, cs, cs);
+                this.ctx.strokeStyle = '#bbb';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(x, y, cellSize, cellSize);
-                
-                // Cell value
-                this.ctx.fillStyle = '#000000';
-                this.ctx.font = 'bold 10px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
+                this.ctx.strokeRect(x, y, cs, cs);
                 if (dp[i][j] !== 0 && dp[i][j] !== Infinity) {
-                    this.ctx.fillText(dp[i][j].toString(), x + cellSize / 2, y + cellSize / 2);
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.font = 'bold 9px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(dp[i][j].toLocaleString(), x + cs / 2, y + cs / 2);
                 }
             }
         }
-        
-        // Result
-        const minCost = dp[1][n];
+        const minCost = dp[1] && dp[1][n] !== undefined ? dp[1][n] : '—';
+        const ry = oy + n * cs + 12;
         this.ctx.fillStyle = '#4caf50';
-        this.ctx.fillRect(offsetX, offsetY + n * cellSize + 20, 200, 35);
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 13px Arial';
+        this.ctx.fillRect(ox, ry, 200, 28);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(`Min Cost: ${minCost}`, offsetX + 100, offsetY + n * cellSize + 37);
+        this.ctx.fillText(`Min ops: ${typeof minCost === 'number' ? minCost.toLocaleString() : minCost}`, ox + 100, ry + 14);
     }
 
+    // FIX: drawString was broken — missing closing brace and early-return on object data
     drawString() {
-        if (!this.data || !Array.isArray(this.data)) return;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        const charWidth = 35;
-        const charHeight = 35;
-        const startX = 30;
-        const textY = 80;
-        const patternY = 200;
-        
-        // Draw text label
+        // this.data is an object {text, pattern, textIndex, patternIndex} for string algorithms
+        if (!this.data || typeof this.data !== 'object' || Array.isArray(this.data)) return;
+        if (!this.data.text || !this.data.pattern) return;
+
+        const charW = 35, charH = 35, startX = 30, textY = 80, patternY = 200;
+
         this.ctx.fillStyle = '#1976d2';
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'left';
         this.ctx.fillText('Text:', startX, textY - 25);
-        
-        // Draw text characters
-        if (this.data.text && Array.isArray(this.data.text)) {
-            this.data.text.forEach((char, index) => {
-            const x = startX + 70 + index * charWidth;
-            
-            // Box background
-            this.ctx.fillStyle = this.data.textIndex === index ? '#ff5722' : '#667eea';
-            this.ctx.fillRect(x, textY - 20, charWidth, charHeight);
-            
-            // Border
-            this.ctx.strokeStyle = '#333333';
+
+        this.data.text.forEach((char, index) => {
+            const x = startX + 70 + index * charW;
+            const isHighlighted = this.data.textIndex === index || (this.compareIndices && this.compareIndices.includes(index));
+            const isFound = this.foundIndex !== -1 && index >= this.foundIndex && index < this.foundIndex + this.data.pattern.length;
+
+            this.ctx.fillStyle = isFound ? '#4caf50' : isHighlighted ? '#ff5722' : '#667eea';
+            this.ctx.fillRect(x, textY - 20, charW, charH);
+            this.ctx.strokeStyle = '#333';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, textY - 20, charWidth, charHeight);
-            
-            // Character text with black color for better contrast
-            this.ctx.fillStyle = '#000000';
+            this.ctx.strokeRect(x, textY - 20, charW, charH);
+            this.ctx.fillStyle = '#000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(char, x + charWidth / 2, textY - 2);
-            
-            // Index below
+            this.ctx.fillText(char, x + charW / 2, textY - 2);
             this.ctx.fillStyle = '#666';
             this.ctx.font = '11px Arial';
-            this.ctx.fillText(index.toString(), x + charWidth / 2, textY + 20);
+            this.ctx.fillText(index.toString(), x + charW / 2, textY + 20);
         });
-        
-        // Draw pattern label
-        this.ctx.fillStyle = '#1976d2';
+
+        this.ctx.fillStyle = '#388e3c';
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'left';
         this.ctx.fillText('Pattern:', startX, patternY - 25);
-        
-        // Draw pattern characters
+
         this.data.pattern.forEach((char, index) => {
-            const x = startX + 70 + index * charWidth;
-            
-            // Box background
+            const x = startX + 70 + index * charW;
             this.ctx.fillStyle = this.data.patternIndex === index ? '#ff5722' : '#4caf50';
-            this.ctx.fillRect(x, patternY - 20, charWidth, charHeight);
-            
-            // Border
-            this.ctx.strokeStyle = '#333333';
+            this.ctx.fillRect(x, patternY - 20, charW, charH);
+            this.ctx.strokeStyle = '#333';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, patternY - 20, charWidth, charHeight);
-            
-            // Character text with black color for better contrast
-            this.ctx.fillStyle = '#000000';
+            this.ctx.strokeRect(x, patternY - 20, charW, charH);
+            this.ctx.fillStyle = '#000';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(char, x + charWidth / 2, patternY - 2);
-            
-            // Index below
+            this.ctx.fillText(char, x + charW / 2, patternY - 2);
             this.ctx.fillStyle = '#666';
             this.ctx.font = '11px Arial';
-            this.ctx.fillText(index.toString(), x + charWidth / 2, patternY + 20);
+            this.ctx.fillText(index.toString(), x + charW / 2, patternY + 20);
         });
+
+        // Match indicator
+        if (this.foundIndex !== -1) {
+            this.ctx.fillStyle = '#4caf50';
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`✓ Match found at index ${this.foundIndex}!`, startX, patternY + 60);
+        }
     }
 }
 
-// Initialize the simulator when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.simulator = new AlgorithmSimulator();
 });
 
-// Warning modal close function
 function closeWarning() {
     document.getElementById('warning-modal').classList.remove('active');
 }
 
-// Show warning for incomplete algorithms - All algorithms are now fully implemented
 function showWarningForIncomplete(algoId) {
-    // No incomplete algorithms - all are fully implemented
     return false;
 }

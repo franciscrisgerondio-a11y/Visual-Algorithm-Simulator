@@ -33,10 +33,10 @@
                 <button id="pause-btn" class="control-btn">⏸ Pause</button>
                 <button id="reset-btn" class="control-btn">🔄 Reset</button>
                 <label>
-                    Speed: 
+                    Speed:
                     <input type="range" id="speed-slider" min="1" max="100" value="50">
                 </label>
-                <div id="stats" class="stats"></div>
+                <div id="stats" class="stats">Ready</div>
             </div>
             <div id="canvas-container" class="canvas-container">
                 <canvas id="algo-canvas"></canvas>
@@ -45,28 +45,29 @@
                 <h3>Simulation Log</h3>
                 <div id="simulation-log" class="log-content"></div>
             </div>
-            <div id="description" class="description"></div>
+            <div id="description" class="description">
+                <h3>Algorithm Simulator</h3>
+                <p>Select a category above, then choose an algorithm to begin. Press <strong>Start</strong> to run the visualization.</p>
+            </div>
         </section>
 
         <section id="code-display" class="code-section">
             <h3>Algorithm Code</h3>
-            <pre><code id="algorithm-code"></code></pre>
+            <pre><code id="algorithm-code">// Select an algorithm to view its code</code></pre>
         </section>
     </main>
 
-    <!-- Warning Modal -->
     <div id="warning-modal" class="warning-modal">
         <div class="warning-content">
             <div class="warning-icon">⚠️</div>
             <h2>Work in Progress</h2>
-            <p>This algorithm visualization is currently under development. The visualization may not display correctly or may be incomplete.</p>
-            <p>We're working hard to bring you a complete experience!</p>
+            <p>This algorithm visualization is currently under development.</p>
             <button class="warning-close-btn" onclick="closeWarning()">Continue Anyway</button>
         </div>
     </div>
 
     <footer>
-        <p>Visual Algorithm Simulator - Learn algorithms through interactive visualization</p>
+        <p>Visual Algorithm Simulator — Learn algorithms through interactive visualization</p>
     </footer>
 
     <script src="app.js"></script>
